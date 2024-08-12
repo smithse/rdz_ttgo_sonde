@@ -135,6 +135,8 @@ String ConnAPRS::getStatus() {
 
 void ConnAPRS::aprs_station_update() {
   int chase = sonde.config.chase;
+  if (chase == SH_LOC_OFF) // do not send any location
+    return;
   // automatically decided if CHASE or FIXED mode is used (for config AUTO)
   if (chase == SH_LOC_AUTO) {
     if (posInfo.chase) chase = SH_LOC_CHASE; else chase = SH_LOC_FIXED;

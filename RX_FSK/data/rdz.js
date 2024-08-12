@@ -16,7 +16,8 @@ function loadaprs(baseurl,callback) {
   document.head.appendChild(script);
 }
 
-loadaprs("http://rdzsonde.mooo.com/aprs", function() {
+document.addEventListener('DOMContentLoaded', function() {
+ loadaprs("http://rdzsonde.mooo.com/aprs", function() {
   var inputBox = document.querySelector('input[name="tcp.beaconsym"]');
   if(inputBox) {
     inputBox.addEventListener('input', showaprs);
@@ -33,6 +34,7 @@ loadaprs("http://rdzsonde.mooo.com/aprs", function() {
     showaprs();
     inputBox.addEventListener('input', function() { showaprs(); });
   }
+ });
 });
   
 function footer() {
