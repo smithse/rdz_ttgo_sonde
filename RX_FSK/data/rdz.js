@@ -5,6 +5,36 @@ stypes.set('D', 'DFM');
 stypes.set('M', 'M10/M20');
 stypes.set('3', 'MP3H');
 
+function loadaprs(baseurl,callback) {
+  var link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = baseurl + "/aprs-symbols.css";
+  document.head.appendChild(link);
+  var script = document.createElement('script');
+  script.src = baseurl + "/aprs-symbols.js";
+  script.onload = function() { if (typeof callback === 'function') { callback(); } }
+  document.head.appendChild(script);
+}
+
+loadaprs("http://rdzsonde.mooo.com/aprs", function() {
+  var inputBox = document.querySelector('input[name="tcp.beaconsym"]');
+  if(inputBox) {
+    inputBox.addEventListener('input', showaprs);
+    var newdiv = document.createElement('div');
+    newdiv.id = 'aprsSyms';
+    inputBox.insertAdjacentElement('afterend', newdiv);
+    function showaprs() {
+      var inp = inputBox.value;
+      var tag1 = getAPRSSymbolImageTag(inp.slice(0,2));
+      var tag2 = getAPRSSymbolImageTag(inp.slice(2,4));
+      if(typeof tag1 === 'string') { newdiv.innerHTML = "Fixed: "+tag1; }
+      if(typeof tag2 === 'string') { newdiv.innerHTML += " Chase: "+tag2; }
+    }
+    showaprs();
+    inputBox.addEventListener('input', function() { showaprs(); });
+  }
+});
+  
 function footer() {
   document.addEventListener("DOMContentLoaded", function(){
     var form = document.querySelector(".wrapper");

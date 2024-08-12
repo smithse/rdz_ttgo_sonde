@@ -107,6 +107,7 @@ void gpsTask(void *parameter) {
         if (gpsPos.valid) {
           gpsPos.lon = nmea.getLongitude() * 0.000001;
           gpsPos.lat = nmea.getLatitude() * 0.000001;
+          gpsPos.speed = nmea.getSpeed() / 1000.0 * 0.514444; // speed is in m/s nmea.getSpeed is in 0.001 knots
           long alt = 0;
           nmea.getAltitude(alt);
           gpsPos.alt = (int)(alt / 1000);
@@ -122,23 +123,23 @@ void gpsTask(void *parameter) {
           }
           if (gpsPos.lon == 0 && gpsPos.lat == 0) gpsPos.valid = false;
         }
-	/* Check if home */
+        /* Check if home */
         if(gpsPos.valid) {
-	    float d = fabs(gpsPos.lon - sonde.config.rxlon);
-	    d += fabs(gpsPos.lat - sonde.config.rxlat);
-	    // Activate GPS position tracking as soon as it is a bit away from home position
-	    if(/*!posInfo.chase &&*/ d > AUTO_CHASE_THRESHOLD) {
-		posInfo = gpsPos;
+            float d = fabs(gpsPos.lon - sonde.config.rxlon);
+            d += fabs(gpsPos.lat - sonde.config.rxlat);
+            // Activate GPS position tracking as soon as it is a bit away from home position
+            if(/*!posInfo.chase &&*/ d > AUTO_CHASE_THRESHOLD) {
+                posInfo = gpsPos;
                 posInfo.chase = 1;
             } else if ( posInfo.chase && d < AUTO_CHASE_THRESHOLD/2 ) {
-	    // Stop GPS position tracking / chase mode as soon as it is very close to home (fixeedToPosInfo sets chase to 0)
-		fixedToPosInfo();
+            // Stop GPS position tracking / chase mode as soon as it is very close to home (fixeedToPosInfo sets chase to 0)
+                fixedToPosInfo();
             } else {
-	    // Otherwise, continue tracking the GPS position
-		posInfo = gpsPos;
+            // Otherwise, continue tracking the GPS position
+                posInfo = gpsPos;
                 posInfo.chase = 1;
-	    }
-	}
+            }
+        }
 
         gpsPos.hdop = nmea.getHDOP();
         gpsPos.sat = nmea.getNumSatellites();

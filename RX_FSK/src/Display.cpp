@@ -1555,6 +1555,22 @@ void Display::drawGPS(DispEntry *de) {
 		snprintf(buf, 4, "%3d", gpsPos.course);
 		drawString(de, buf);
 		break;
+        case 'S':
+		// GPS speed over ground
+		// extra[1]: m for m/s, k for km/h
+		// extra[2...]: additional text that is appended, like "m/s" or "km/h"
+		//              if omitted, the m/s or km/h tile is appended on LCD displays (not TFT)
+		if(!de->extra[1]) break; // missing m or k
+                {
+		float speed = gpsPos.speed;
+		if(de->extra[1] != 'm') speed *= 3.6;
+		snprintf(buf, 16, "%.2f%s", speed, de->extra+2);
+		drawString(de, buf);
+		if(!de->extra[2]) {
+			rdis->drawTile(de->x+5, de->y, 2, de->extra[1]=='m' ? ms_tiles : kmh_tiles);
+		}
+                }
+                break;
 	case 'D':
 		{
 		// distance

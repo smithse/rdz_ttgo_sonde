@@ -1605,7 +1605,8 @@ void handlePMUirq() {
       button2.keydownTime = my_millis();
     }
   } else {
-    Serial.println("handlePMIirq() called. THIS SHOULD NOT HAPPEN w/o button2_axp set");
+    // WiFi loop intentionally calls this in order to react to PMU key press
+    //Serial.println("handlePMIirq() called. THIS SHOULD NOT HAPPEN w/o button2_axp set");
     pmu_irq = 0;   // prevent main loop blocking
   }
 }

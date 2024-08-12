@@ -287,6 +287,13 @@ void Sonde::checkConfig() {
 	if(config.sondehub.fimaxage==0) config.sondehub.fimaxage = 2;
         // auto upgrade config to new version with format arguments in string
         if(!strchr(sonde.config.ephftp,'%')) strcpy(sonde.config.ephftp,DEFEPH);
+	switch(strlen(config.beaconsym)) {
+		case 0: case 1:
+			strcpy(config.beaconsym,"/`/("); // default: dish antenne, mobile sat station
+			break;
+		case 2: case 3:
+			strcpy(config.beaconsym+2, "/(");  // default sym2: mobile sat station
+	}
 }
 void Sonde::setConfig(const char *cfg) {
 	while(*cfg==' '||*cfg=='\t') cfg++;
