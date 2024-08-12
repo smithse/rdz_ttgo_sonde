@@ -19,9 +19,9 @@ public:
     uint16_t readRegisters_8_4(uint8_t reghi, uint8_t reglo);
     uint16_t readRegisters_8_5(uint8_t reghi, uint8_t reglo);
     int writeRegister(uint8_t reg, uint8_t val);
-    int getRegisterBit(uint8_t register, uint8_t bit);
-    int setRegisterBit(uint8_t register, uint8_t bit);
-    int clearRegisterBit(uint8_t register, uint8_t bit);
+    int getRegisterBit(uint8_t reg, uint8_t bit);
+    int setRegisterBit(uint8_t reg, uint8_t bit);
+    int clearRegisterBit(uint8_t reg, uint8_t bit);
 
     int handleIRQ();
 

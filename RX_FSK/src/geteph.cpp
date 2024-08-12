@@ -3,9 +3,9 @@
 
 #include "time.h"
 #include "geteph.h"
-#include <SPIFFS.h>
+#include <LittleFS.h>
 #include <WiFi.h>
-#include <rom/miniz.h>
+#include <miniz.h>
 #include <inttypes.h>
 #include <WiFi.h>
 #include "Display.h"
@@ -67,7 +67,7 @@ void geteph() {
 	Serial.printf("year %d, day %d\n", year, day);
 	char nowstr[20];
 	snprintf(nowstr, 20, "%04d%03d%02d", year, day, tinfo.tm_hour);
-	File status = SPIFFS.open("/brdc.time", "r");
+	File status = LittleFS.open("/brdc.time", "r");
 	if(status) {
 		String ts = status.readStringUntil('\n');
 		const char *tsstr = ts.c_str();
@@ -81,7 +81,7 @@ void geteph() {
 		Serial.printf("now: %s, existing: %s => updating\n", nowstr, tsstr);
 	}
 	status.close();
-	File fh = SPIFFS.open("/brdc.gz","w");
+	File fh = LittleFS.open("/brdc.gz","w");
 	if(!fh) {	
 		Serial.println("cannot open file\n");
 		return;
@@ -168,12 +168,12 @@ void geteph() {
 	// decompression
 	tinfl_decompressor *decomp = (tinfl_decompressor *)malloc(sizeof(tinfl_decompressor));
 	tinfl_init(decomp);
-	File file = SPIFFS.open("/brdc.gz","r");
+	File file = LittleFS.open("/brdc.gz","r");
 	if(!file) {	
 		Serial.println("cannot open file\n");
 		return;
 	}
-	File ofile = SPIFFS.open("/brdc", "w");
+	File ofile = LittleFS.open("/brdc", "w");
 	if(!ofile) {
 		Serial.println("cannot open file /brdc for writing");
 		return;
@@ -227,7 +227,7 @@ void geteph() {
 	}
 	// maybe todo: check crc?!?
 	Serial.printf("done extracing content (total length: %d)\n", total);
-	status = SPIFFS.open("/brdc.time","w");
+	status = LittleFS.open("/brdc.time","w");
 	status.println(nowstr);
 	status.close();
         snprintf(buf, 16, "Done: %d B    ",total);

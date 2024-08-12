@@ -1,8 +1,8 @@
 #include "../features.h"
 #include <U8x8lib.h>
 #include <U8g2lib.h>
-#include <SPIFFS.h>
 #include <MicroNMEA.h>
+#include <LittleFS.h>
 #include "Display.h"
 #include "Sonde.h"
 #include "pmu.h"
@@ -25,7 +25,7 @@ extern Sonde sonde;
 extern PMU *pmu;
 extern SemaphoreHandle_t axpSemaphore;
 
-extern xSemaphoreHandle globalLock;
+extern SemaphoreHandle_t globalLock;
 #define SPI_MUTEX_LOCK() \
   do                     \
   {                      \
@@ -265,14 +265,16 @@ static const uint8_t *fl[] = {
 
 
 void U8x8Display::begin() {
-	Serial.printf("Init SSD1306 display %d %d\n", sonde.config.oled_scl, sonde.config.oled_sda);
+	Serial.printf("Init SSD1306 display %d %d %d\n", sonde.config.oled_scl, sonde.config.oled_sda, sonde.config.oled_rst);
 	//u8x8 = new U8X8_SSD1306_128X64_NONAME_SW_I2C(/* clock=*/ sonde.config.oled_scl, /* data=*/ sonde.config.oled_sda, /* reset=*/ sonde.config.oled_rst); // Unbuffered, basic graphics, software I2C
 	if (_type==2) {
                	u8x8 = new U8X8_SH1106_128X64_NONAME_HW_I2C(/* reset=*/ sonde.config.oled_rst, /* clock=*/ sonde.config.oled_scl, /* data=*/ sonde.config.oled_sda); // Unbuffered, basic graphics, software I2C
 	} else { //__type==0 or anything else
 		u8x8 = new U8X8_SSD1306_128X64_NONAME_HW_I2C(/* reset=*/ sonde.config.oled_rst, /* clock=*/ sonde.config.oled_scl, /* data=*/ sonde.config.oled_sda); // Unbuffered, basic graphics, software I2C
 	} 
+ 	Serial.println("calling begin..");
 	u8x8->begin();
+	Serial.println("setup finishing...");
 	if(sonde.config.tft_orient==3) u8x8->setFlipMode(true);
 	if(sonde.config.dispcontrast>=0) u8x8->setContrast(sonde.config.dispcontrast);
 
@@ -380,7 +382,7 @@ void U8x8Display::drawQS(uint16_t x, uint16_t y, uint8_t len, uint8_t /*size*/, 
 }
 
 
-#ifdef LEGACY_FONTS_IN_CODEBIN
+#if LEGACY_FONTS_IN_CODEBIN
 const GFXfont *legacygfl[] = {
 	&Terminal11x16Font,		// 1 (replacement for 1 with old library)
 	&Terminal11x16Font,		// 2 (replacement for 2 with old library)
@@ -396,7 +398,8 @@ const GFXfont **gfl = legacygfl;
 static int ngfx = sizeof(legacygfl)/sizeof(GFXfont *);
 #else
 // will crash if no font partition exists........
-const GFXdont **gfl = NULL;
+const GFXfont **gfl = NULL;
+static int ngfx = 0;
 #endif
 
 
@@ -405,14 +408,14 @@ const GFXdont **gfl = NULL;
 static void init_gfx_fonts() {
 	// if we have a fonts partition, relocate and use that...
 	const esp_partition_t *part;
-	spi_flash_mmap_handle_t handle;
+	esp_partition_mmap_handle_t handle;
 	void *data;
 	esp_err_t err;
 
-	part = esp_partition_find_first((esp_partition_type_t)0x40, ESP_PARTITION_SUBTYPE_APP_FACTORY, "fonts");
+        part = esp_partition_find_first(ESP_PARTITION_TYPE_ANY, ESP_PARTITION_SUBTYPE_ANY, "fonts");
 	if(part) {
-		Serial.println("FONT partition found!");
-		err = esp_partition_mmap(part, 0, part->size, SPI_FLASH_MMAP_DATA, (const void **)&data, &handle);
+		Serial.printf("FONT partition found, size is %d!", part->size);
+		err = esp_partition_mmap(part, 0, part->size, ESP_PARTITION_MMAP_DATA, (const void **)&data, &handle);
 		if( err != ESP_OK ) {
 			Serial.println("mmap not OK\n");
 			return;
@@ -424,8 +427,9 @@ static void init_gfx_fonts() {
 			Serial.println("No font data in font partition");
 			return; 
 		}
+		fptr++;
 		int n=0; 
-		for(const GFXfont **g=fptr; *g!=NULL; g++) n++;
+		for(const GFXfont **g=fptr; *g!=NULL; g++) { Serial.printf("fptr=%p *=%p\n", g, *g); n++; }
 		Serial.printf("There a %d fonts in the font partition\n", n);
 		if(n>MAXFONT) n=MAXFONT;
 		GFXfont **newgfl = (GFXfont **)malloc( n*sizeof(GFXfont) + MAXFONT*sizeof(GFXfont *)  );
@@ -438,13 +442,18 @@ static void init_gfx_fonts() {
 		for(int i=0; i<n; i++) {
 			newgfl[i] = fonts+i;
 			GFXfont *orig = (GFXfont *)(((char *)data) + (uint32_t)fptr[i]);
+			printf("data is %p, orig = %p\n", data, orig);
 			memcpy(newgfl[i], orig, sizeof(GFXfont));
 			newgfl[i]->bitmap = newgfl[i]->bitmap + (uint32_t)data;  // relocate bitmap pointer to mmap partition
 			newgfl[i]->glyph = (GFXglyph *)( ((char *)newgfl[i]->glyph) + (uint32_t)data );
-			Serial.printf("font i: gfl[i] is %p,  gfl[i]->bitmap is %p, gfl[i]->glyph is %p\n", newgfl[i], newgfl[i]->bitmap, newgfl[i]->glyph);
+			Serial.printf("font %d: gfl[i] is %p,  gfl[i]->bitmap is %p, gfl[i]->glyph is %p\n", i, newgfl[i], newgfl[i]->bitmap, newgfl[i]->glyph);
+			Serial.printf("  font data: first=%d, last=%d, yAdv=%d\n", newgfl[i]->first, newgfl[i]->last, newgfl[i]->yAdvance);
 		}
 		gfl = (const GFXfont **)newgfl;
 		ngfx = n;
+	} else {
+		Serial.println("FATAL ERROR: NO FONT PARTITION FOUND\n");
+		while(1);
 	}
 }
 
@@ -1045,11 +1054,12 @@ int Display::getScreenIndex(int index) {
 void Display::initFromFile(int index) {
 	File d;
 	char file[20];
+        printf("getting index: %d\n", index);
 
 	index = getScreenIndex(index);  // auto selection for index==0
 	snprintf(file, 20, "/screens%d.txt", index);
 	Serial.printf("Reading %s\n", file);
-	d = SPIFFS.open(file, "r");
+	d = LittleFS.open(file, "r");
 	if(!d || d.available()==0 ) { Serial.printf("%s not found\n", file); return; }
 
 	DispInfo *newlayouts = (DispInfo *)malloc(MAXSCREENS * sizeof(DispInfo));

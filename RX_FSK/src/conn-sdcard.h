@@ -30,6 +30,7 @@ public:
         /* Called approx 1x / second* */
         virtual void updateStation( PosInfo *pi );
 
+        String getStatus();
 
 private:
 	File file;

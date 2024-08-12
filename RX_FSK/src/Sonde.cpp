@@ -104,7 +104,8 @@ void Sonde::defaultConfig() {
 	config.sx1278_miso = MISO;
 	config.sx1278_mosi = MOSI;
 	config.sx1278_sck = SCK;
-	config.oled_rst = 16;
+	// config.oled_rst = 16;
+	config.oled_rst = -1;   // GPIO16 is Flash CS on Lora32 v1.6
 	config.disptype = 0;
 	config.dispcontrast = -1;
 	config.tft_orient = 1;
@@ -115,11 +116,16 @@ void Sonde::defaultConfig() {
 	if(initlevels[16]==0) {
 		config.oled_sda = 4;
 		config.oled_scl = 15;
+		config.oled_rst = 16;
 		config.button_pin = 0;
 		config.button2_pin = T4 + 128;     // T4 == GPIO13
 		config.power_pout = 21;		   // for Heltec v2
 		config.led_pout = 2;	
 		Serial.println("Autoconfig: looks like TTGO v1 / Heltec v1/V2 board");
+		// Note: binary image compiled for other boards (40 MHz crystal) will no longer work for v1 board (26 MHz crystal)
+		// -- serial speed is wrong (staring arduino-idf 3.0.4), and WiFi also is partially broken.
+		// So if using that old board, you need to recompile specifically for the 26 MHz.
+
 	} else {
 		config.oled_sda = 21;
 		config.oled_scl = 22;

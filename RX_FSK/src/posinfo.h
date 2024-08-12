@@ -4,7 +4,6 @@
 
 #include <inttypes.h>
 #include "Sonde.h"
-#include <SPIFFS.h>
 
 enum { SH_LOC_OFF, SH_LOC_FIXED, SH_LOC_CHASE, SH_LOC_AUTO };
 

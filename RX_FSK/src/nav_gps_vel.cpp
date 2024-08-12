@@ -12,7 +12,7 @@
 */
 #include <math.h>
 #include <inttypes.h>
-#include <SPIFFS.h>
+#include <LittleFS.h>
 #include <Arduino.h>
 #include <stdio.h>
 
@@ -106,7 +106,7 @@ EPHEM_t *read_RNXpephs(const char *file) {
     int c;
     EPHEM_t ephem = {};
 
-    File fp = SPIFFS.open(file, "r");
+    File fp = LittleFS.open(file, "r");
     if(!fp) { Serial.printf("Error opening %s\n", file); }
 
     String line;

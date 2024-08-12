@@ -5,13 +5,17 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include <ESPAsyncWebServer.h>
-#include <SPIFFS.h>
+
+#include <LittleFS.h>
+
 #include <SPI.h>
 #include <Update.h>
 #include <ESPmDNS.h>
 #include <Ticker.h>
 #include "esp_heap_caps.h"
-#include "soc/rtc_wdt.h"
+//#include <rtc_wdt.h>
+//#include "soc/timer_group_struct.h"
+//#include "soc/timer_group_reg.h"
 
 #include "src/SX1278FSK.h"
 #include "src/Sonde.h"
@@ -63,8 +67,8 @@ extern uint8_t pmu_irq;
 const char *updateHost = "rdzsonde.mooo.com";
 int updatePort = 80;
 
-const char *updatePrefixM = "/master/";
-const char *updatePrefixD = "/devel/";
+const char *updatePrefixM = "/main/";
+const char *updatePrefixD = "/dev/";
 const char *updatePrefix = updatePrefixM;
 
 
@@ -233,7 +237,7 @@ char message[10240 * 3 - 2048]; //needs to be large enough for all forms (not ch
 ///////////////////////// Functions for Reading / Writing QRG list from/to qrg.txt
 
 void setupChannelList() {
-  File file = SPIFFS.open("/qrg.txt", "r");
+  File file = LittleFS.open("/qrg.txt", "r");
   if (!file) {
     Serial.println("There was an error opening the file '/qrg.txt' for reading");
     return;
@@ -323,7 +327,7 @@ const char *createQRGForm() {
 const char *handleQRGPost(AsyncWebServerRequest * request) {
   char label[10];
   // parameters: a_i, f_1, t_i  (active/frequency/type)
-  File file = SPIFFS.open("/qrg.txt", "w");
+  File file = LittleFS.open("/qrg.txt", "w");
   if (!file) {
     Serial.println("Error while opening '/qrg.txt' for writing");
     return "Error while opening '/qrg.txt' for writing";
@@ -378,7 +382,7 @@ struct {
 // FIXME: For now, we don't uspport wifi networks that contain newline or null characters
 // ... would require a more sophisicated file format (currently one line SSID; one line Password
 void setupWifiList() {
-  File file = SPIFFS.open("/networks.txt", "r");
+  File file = LittleFS.open("/networks.txt", "r");
   if (!file) {
     Serial.println("There was an error opening the file '/networks.txt' for reading");
     networks[0].id = "RDZsonde";
@@ -447,7 +451,7 @@ const char *handleWIFIPost(AsyncWebServerRequest * request) {
   char label[10];
   // parameters: a_i, f_1, t_i  (active/frequency/type)
 #if 1
-  File f = SPIFFS.open("/networks.txt", "w");
+  File f = LittleFS.open("/networks.txt", "w");
   if (!f) {
     Serial.println("Error while opening '/networks.txt' for writing");
     return "Error while opening '/networks.txt' for writing";
@@ -571,7 +575,7 @@ const char *createLiveJson() {
 
 
 void setupConfigData() {
-  File file = SPIFFS.open("/config.txt", "r");
+  File file = LittleFS.open("/config.txt", "r");
   if (!file) {
     Serial.println("There was an error opening the file '/config.txt' for reading");
     return;
@@ -757,7 +761,7 @@ const char *handleConfigPost(AsyncWebServerRequest * request) {
   // parameters: a_i, f_1, t_i  (active/frequency/type)
   Serial.println("Handling post request");
 #if 1
-  File f = SPIFFS.open("/config.txt", "w");
+  File f = LittleFS.open("/config.txt", "w");
   if (!f) {
     Serial.println("Error while opening '/config.txt' for writing");
     return "Error while opening '/config.txt' for writing";
@@ -887,7 +891,7 @@ void handleUpload(AsyncWebServerRequest * request, String filename, size_t index
   static File file;
   if (!index) {
     Serial.printf("UploadStart: %s\n", filename.c_str());
-    file = SPIFFS.open("/" + filename, "w");
+    file = LittleFS.open("/" + filename, "w");
     if (!file) {
       Serial.println("There was an error opening the file '/config.txt' for reading");
     }
@@ -956,7 +960,7 @@ int streamEditForm(int &state, File & file, String filename, char *buffer, size_
 const char *createEditForm(String filename) {
   Serial.println("Creating edit form");
   char *ptr = message;
-  File file = SPIFFS.open("/" + filename, "r");
+  File file = LittleFS.open("/" + filename, "r");
   if (!file) {
     Serial.println("There was an error opening the file '/config.txt' for reading");
     return "<html><head><title>File not found</title></head><body>File not found</body></html>";
@@ -1015,7 +1019,7 @@ const char *handleEditPost(AsyncWebServerRequest * request) {
     Serial.println("File is empty. Not written.");
     return NULL;
   }
-  File file = SPIFFS.open("/" + filename, "w");
+  File file = LittleFS.open("/" + filename, "w");
   if (!file) {
     Serial.println("There was an error opening the file '/" + filename + "'for writing");
     return "";
@@ -1039,9 +1043,9 @@ const char *createUpdateForm(boolean run) {
     strcat(ptr, "<p>Doing update, wait until reboot</p>");
   } else {
     sprintf(ptr + strlen(ptr), "<p>Currently installed: %s-%c%d</p>\n", version_id, SPIFFS_MAJOR + 'A' - 1, SPIFFS_MINOR);
-    strcat(ptr, "<p>Available master:: <iframe src=\"http://rdzsonde.mooo.com/master/update-info.html\" style=\"height:40px;width:400px\"></iframe><br>"
-           "Available devel: <iframe src=\"http://rdzsonde.mooo.com/devel/update-info.html\" style=\"height:40px;width:400px\"></iframe></p>");
-    strcat(ptr, "<input type=\"submit\" name=\"master\" value=\"Master-Update\"></input><br><input type=\"submit\" name=\"devel\" value=\"Devel-Update\">");
+    strcat(ptr, "<p>Available main: <iframe src=\"http://rdzsonde.mooo.com/main/update-info.html\" style=\"height:40px;width:400px\"></iframe><br>"
+           "Available devel: <iframe src=\"http://rdzsonde.mooo.com/dev/update-info.html\" style=\"height:40px;width:400px\"></iframe></p>");
+    strcat(ptr, "<input type=\"submit\" name=\"main\" value=\"Main-Update\"></input><br><input type=\"submit\" name=\"dev\" value=\"Devel-Update\">");
     strcat(ptr, "<br><p>Note: If suffix is the same, update should work fully. If the number is different, update contains changes in the file system. A full re-flash is required to get all new features, but the update should not break anything. If the letter is different, a full re-flash is mandatory, update will not work</p>");
   }
   strcat(ptr, "</form></body></html>");
@@ -1055,12 +1059,12 @@ const char *handleUpdatePost(AsyncWebServerRequest * request) {
   for (int i = 0; i < params; i++) {
     String param = request->getParam(i)->name();
     Serial.println(param.c_str());
-    if (param.equals("devel")) {
+    if (param.equals("dev")) {
       Serial.println("equals devel");
       updatePrefix = updatePrefixD;
     }
-    else if (param.equals("master")) {
-      Serial.println("equals master");
+    else if (param.equals("main")) {
+      Serial.println("equals main");
       updatePrefix = updatePrefixM;
     }
   }
@@ -1137,6 +1141,7 @@ const char *sendGPX(AsyncWebServerRequest * request) {
   return message;
 }
 
+#define SPIFFS LittleFS
 
 const char* PARAM_MESSAGE = "message";
 void SetupAsyncServer() {
@@ -1344,7 +1349,7 @@ const char *fetchWifiPw(const char *id) {
 // on a 32bit system, and the called function has no IRAM_ATTR
 // so doing it manually...
 // Code adapted for 64 bits from https://www.hackersdelight.org/divcMore.pdf
-int64_t IRAM_ATTR divs10(int64_t n) {
+static int64_t IRAM_ATTR divs10(int64_t n) {
   int64_t q, r;
   n = n + (n >> 63 & 9);
   q = (n >> 1) + (n >> 2);
@@ -1358,18 +1363,18 @@ int64_t IRAM_ATTR divs10(int64_t n) {
   // return q + (r > 9);
 }
 
-int64_t IRAM_ATTR divs1000(int64_t n) {
+static int64_t IRAM_ATTR divs1000(int64_t n) {
   return divs10(divs10(divs10(n)));
 }
 
-unsigned long IRAM_ATTR my_millis()
+static unsigned long IRAM_ATTR my_millis()
 {
   return divs1000(esp_timer_get_time());
 }
 
-void checkTouchStatus();
-void touchISR();
-void touchISR2();
+static void checkTouchStatus();
+static void touchISR();
+static void touchISR2();
 
 // ISR won't work for SPI transfer, so forget about the following approach
 ///// Also initialized timers for sx1278 handling with interruts
@@ -1448,7 +1453,7 @@ void sx1278Task(void *parameter) {
 }
 
 
-void IRAM_ATTR touchISR() {
+static void IRAM_ATTR touchISR() {
   if (!button1.isTouched) {
     unsigned long now = my_millis();
     if (now - button1.keydownTime < 500) button1.doublepress = 1;
@@ -1458,7 +1463,7 @@ void IRAM_ATTR touchISR() {
   }
 }
 
-void IRAM_ATTR touchISR2() {
+static void IRAM_ATTR touchISR2() {
   if (!button2.isTouched) {
     unsigned long now = my_millis();
     if (now - button2.keydownTime < 500) button2.doublepress = 1;
@@ -1469,7 +1474,7 @@ void IRAM_ATTR touchISR2() {
 }
 
 // touchRead in ISR is also a bad idea. Now moved to Ticker task
-void checkTouchButton(Button & button) {
+static void checkTouchButton(Button & button) {
   if (button.isTouched) {
     int tmp = touchRead(button.pin & 0x7f);
     Serial.printf("touch read %d: value is %d\n", button.pin & 0x7f, tmp);
@@ -1503,14 +1508,14 @@ void flashLed(int ms) {
 }
 
 int doTouch = 0;
-void checkTouchStatus() {
+static void checkTouchStatus() {
   checkTouchButton(button1);
   checkTouchButton(button2);
 }
 
 unsigned long bdd1, bdd2;
 static bool b1wasdown = false;
-void IRAM_ATTR buttonISR() {
+static void IRAM_ATTR buttonISR() {
   if (digitalRead(button1.pin) == 0) { // Button down
     b1wasdown = true;
     unsigned long now = my_millis();
@@ -1546,7 +1551,7 @@ void IRAM_ATTR buttonISR() {
   }
 }
 
-void IRAM_ATTR button2ISR() {
+static void IRAM_ATTR button2ISR() {
   if (digitalRead(button2.pin) == 0) { // Button down
     unsigned long now = my_millis();
     if (now - button2.keydownTime < 500) {
@@ -1669,7 +1674,7 @@ int scanI2Cdevice(void)
 
 extern int initlevels[40];
 
-extern xSemaphoreHandle globalLock;
+extern SemaphoreHandle_t globalLock;
 
 #ifdef ESP_MEM_DEBUG
 typedef void (*esp_alloc_failed_hook_t) (size_t size, uint32_t caps, const char * function_name);
@@ -1709,6 +1714,7 @@ void setup()
   Serial.println(" (before setup)");
   sonde.defaultConfig();  // including autoconfiguration
 
+  delay(1000);
   Serial.println("Initializing SPIFFS");
   // Initialize SPIFFS
   if (!SPIFFS.begin(true)) {
@@ -1803,6 +1809,7 @@ void setup()
 
   setupWifiList();
   Serial.printf("before disp.initFromFile... layouts is %p\n", disp.layouts);
+  Serial.printf("test\n");
 
   disp.initFromFile(sonde.config.screenfile);
   Serial.printf("disp.initFromFile... layouts is %p", disp.layouts);
@@ -2018,7 +2025,7 @@ void loopDecoder() {
   if (rdzserver.hasClient()) {
     Serial.println("TCP JSON socket: new connection");
     rdzclient.stop();
-    rdzclient = rdzserver.available();
+    rdzclient = rdzserver.accept();
   }
   if (rdzclient.available()) {
     Serial.print("RDZ JSON socket: received ");
@@ -2256,28 +2263,29 @@ void enableNetwork(bool enable) {
   Serial.println("enableNetwork done");
 }
 
+
 // Events used only for debug output right now
 void WiFiEvent(WiFiEvent_t event)
 {
   Serial.printf("[WiFi-event] event: %d\n", event);
 
   switch (event) {
-    case SYSTEM_EVENT_WIFI_READY:
+    case ARDUINO_EVENT_WIFI_READY:
       Serial.println("WiFi interface ready");
       break;
-    case SYSTEM_EVENT_SCAN_DONE:
+    case ARDUINO_EVENT_WIFI_SCAN_DONE:
       Serial.println("Completed scan for access points");
       break;
-    case SYSTEM_EVENT_STA_START:
+    case ARDUINO_EVENT_WIFI_STA_START:
       Serial.println("WiFi client started");
       break;
-    case SYSTEM_EVENT_STA_STOP:
+    case ARDUINO_EVENT_WIFI_STA_STOP:
       Serial.println("WiFi clients stopped");
       break;
-    case SYSTEM_EVENT_STA_CONNECTED:
+    case ARDUINO_EVENT_WIFI_STA_CONNECTED:
       Serial.println("Connected to access point");
       break;
-    case SYSTEM_EVENT_STA_DISCONNECTED:
+    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
       Serial.println("Disconnected from WiFi access point");
       if (wifi_state == WIFI_CONNECT) {
         // If we get a disconnect event while waiting for connection (as I do sometimes with my FritzBox),
@@ -2287,62 +2295,68 @@ void WiFiEvent(WiFiEvent_t event)
       }
       WiFi.mode(WIFI_MODE_NULL);
       break;
-    case SYSTEM_EVENT_STA_AUTHMODE_CHANGE:
+    case ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE:
       Serial.println("Authentication mode of access point has changed");
       break;
-    case SYSTEM_EVENT_STA_GOT_IP:
+    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
       Serial.print("Obtained IP address: ");
       Serial.println(WiFi.localIP());
       break;
-    case SYSTEM_EVENT_STA_LOST_IP:
+    case ARDUINO_EVENT_WIFI_STA_LOST_IP:
       Serial.println("Lost IP address and IP address is reset to 0");
       break;
-    case SYSTEM_EVENT_STA_WPS_ER_SUCCESS:
+    case ARDUINO_EVENT_WPS_ER_SUCCESS:
       Serial.println("WiFi Protected Setup (WPS): succeeded in enrollee mode");
       break;
-    case SYSTEM_EVENT_STA_WPS_ER_FAILED:
+    case ARDUINO_EVENT_WPS_ER_FAILED:
       Serial.println("WiFi Protected Setup (WPS): failed in enrollee mode");
       break;
-    case SYSTEM_EVENT_STA_WPS_ER_TIMEOUT:
+    case ARDUINO_EVENT_WPS_ER_TIMEOUT:
       Serial.println("WiFi Protected Setup (WPS): timeout in enrollee mode");
       break;
-    case SYSTEM_EVENT_STA_WPS_ER_PIN:
+    case ARDUINO_EVENT_WPS_ER_PIN:
       Serial.println("WiFi Protected Setup (WPS): pin code in enrollee mode");
       break;
-    case SYSTEM_EVENT_AP_START:
+    case ARDUINO_EVENT_WIFI_AP_START:
       Serial.println("WiFi access point started");
       break;
-    case SYSTEM_EVENT_AP_STOP:
+    case ARDUINO_EVENT_WIFI_AP_STOP:
       Serial.println("WiFi access point  stopped");
       break;
-    case SYSTEM_EVENT_AP_STACONNECTED:
+    case ARDUINO_EVENT_WIFI_AP_STACONNECTED:
       Serial.println("Client connected");
       break;
-    case SYSTEM_EVENT_AP_STADISCONNECTED:
+    case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
       Serial.println("Client disconnected");
       break;
-    case SYSTEM_EVENT_AP_STAIPASSIGNED:
+    case ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED:
       Serial.println("Assigned IP address to client");
       break;
-    case SYSTEM_EVENT_AP_PROBEREQRECVED:
+    case ARDUINO_EVENT_WIFI_AP_PROBEREQRECVED:
       Serial.println("Received probe request");
       break;
-    case SYSTEM_EVENT_GOT_IP6:
-      Serial.println("IPv6 is preferred");
+    case ARDUINO_EVENT_WIFI_AP_GOT_IP6:
+      Serial.println("AP IPv6 is preferred");
       break;
-    case SYSTEM_EVENT_ETH_START:
+    case ARDUINO_EVENT_WIFI_STA_GOT_IP6:
+      Serial.println("STA IPv6 is preferred");
+      break;
+    case ARDUINO_EVENT_ETH_GOT_IP6:
+      Serial.println("Ethernet IPv6 is preferred");
+      break;
+    case ARDUINO_EVENT_ETH_START:
       Serial.println("Ethernet started");
       break;
-    case SYSTEM_EVENT_ETH_STOP:
+    case ARDUINO_EVENT_ETH_STOP:
       Serial.println("Ethernet stopped");
       break;
-    case SYSTEM_EVENT_ETH_CONNECTED:
+    case ARDUINO_EVENT_ETH_CONNECTED:
       Serial.println("Ethernet connected");
       break;
-    case SYSTEM_EVENT_ETH_DISCONNECTED:
+    case ARDUINO_EVENT_ETH_DISCONNECTED:
       Serial.println("Ethernet disconnected");
       break;
-    case SYSTEM_EVENT_ETH_GOT_IP:
+    case ARDUINO_EVENT_ETH_GOT_IP:
       Serial.println("Obtained IP address");
       break;
     default:

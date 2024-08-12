@@ -18,6 +18,10 @@ void ConnSDCard::netsetup() {
 	/* empty function, we don't use any network here */
 }
 
+String ConnSDCard::getStatus() {
+    return String("");
+}
+
 void ConnSDCard::updateSonde( SondeInfo *si ) {
 	if (!initok) return;
 	if (!file) {

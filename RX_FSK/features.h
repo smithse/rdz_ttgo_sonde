@@ -2,13 +2,14 @@
 // Configuration flags for including/excluding fuctionality from the compiled binary
 // set flag to 0 for exclude/1 for include
 
+#if 1
 // Selection of data output connectors to be included in firmware
 // APRS includes AXUDP (e.g. for aprsmap) and APRS-IS (TCP) (e.g. for wettersonde.net, radiosondy.info)
 #define FEATURE_SONDEHUB 1
 
 #define FEATURE_CHASEMAPPER 1
 #define FEATURE_MQTT 1
-#define FEATURE_SDCARD 0
+#define FEATURE_SDCARD 1
 #define FEATURE_APRS 1
 
 
@@ -26,5 +27,14 @@
  * Also, it is easier to use different fonts :) just flash the font partition w/ something else...
  * This option will likely be removed post-master1.0
  */
-#define LEGACY_FONTS_IN_CODEBIN 1
+#define LEGACY_FONTS_IN_CODEBIN 0
 
+
+#else
+   // Safeboot image is a minimalistic version that only includes WiFi / OTA functionality
+#define FEATURE_SONDEHUB 0
+#define FEATURE_MQTT 0
+#define FEATURE_SDARD 0
+#define FEATURE_APRS 0
+#define LEGACY_FONTS_IN_CODEBIN 0
+#endif
