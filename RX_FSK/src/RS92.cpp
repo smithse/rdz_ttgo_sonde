@@ -6,7 +6,7 @@
 #include "SX1278FSK.h"
 #include "rsc.h"
 #include "Sonde.h"
-#include <SPIFFS.h>
+#include <LittleFS.h>
 
 // well...
 #include "rs92gps.h"

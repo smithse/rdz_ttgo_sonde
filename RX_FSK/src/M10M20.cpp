@@ -5,7 +5,6 @@
 #include "SX1278FSK.h"
 #include "rsc.h"
 #include "Sonde.h"
-#include <SPIFFS.h>
 
 #define M10M20_DEBUG 1
 

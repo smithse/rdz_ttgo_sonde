@@ -50,7 +50,6 @@
 #include <math.h>
 #include <stdint.h>
 
-#include <SPIFFS.h>
 #include "nav_gps_vel.h"
 #include "rs92gps.h"
 #include "geteph.h"

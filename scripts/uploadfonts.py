@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.11
 import requests
 import sys
 import os
@@ -18,6 +18,7 @@ SIZE=-1
 # Fetch font partition info
 file = open(partition, "r")
 for line in file:
+  print(line)
   if line.startswith("fonts"):
     l = line.split(",")
     OFFSET = l[3]
@@ -29,5 +30,5 @@ for line in file:
 print("Using offset ",OFFSET,"; size is ",SIZE)
 
 sys._argv = sys.argv[:]
-sys.argv=[sys._argv[0],"--chip", "esp32", "--baud", "921600", "--before", "default_reset", "--after", "hard_reset", "write_flash", "-z", "--flash_mode", "dio", "--flash_freq", "80m", "--flash_size", "detect", OFFSET, ".pio/build/ttgo-lora32/fonts.bin"]
+sys.argv=[sys._argv[0],"--chip", "esp32", "--baud", "921600", "--before", "default_reset", "--after", "hard_reset", "write_flash", "-z", "--flash_mode", "dio", "--flash_freq", "80m", "--flash_size", "detect", str(OFFSET), ".pio/build/ttgo-lora32/fonts.bin"]
 esptool.main()

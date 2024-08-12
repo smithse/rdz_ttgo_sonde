@@ -171,7 +171,7 @@ public:
 	// class constructor
   	SX1278FSK();
 
-	void setup(xSemaphoreHandle lock);
+	void setup(SemaphoreHandle_t lock);
    	
 	// Turn on SX1278 module (return 0 on sucess, 1 otherwise)
 	uint8_t ON();
@@ -256,7 +256,7 @@ public:
 	// Receive a packet
         uint8_t receivePacketTimeout(uint32_t wait, byte *data);
 
-	xSemaphoreHandle _lock = NULL;
+	SemaphoreHandle_t _lock = NULL;
 
 #if 0
 	//! It gets the internal temperature of the module.

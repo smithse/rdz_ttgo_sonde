@@ -102,7 +102,7 @@ def getpartinfo(partname):
   import gen_esp32part as pt
   # flash complete file system
   # automatically get file system parameters from ESP (i.e. you need to program the partition table first)
-  if False:
+  if True:
     tmpdir = tempfile.mkdtemp()
     partbin = os.path.join(tmpdir, "partition.bin")
     sys._argv = sys.argv[:]

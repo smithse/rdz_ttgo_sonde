@@ -1,5 +1,7 @@
 #include "posinfo.h"
 
+#include <FS.h>
+#include <LittleFS.h>
 #include <MicroNMEA.h>
 
 
@@ -171,7 +173,7 @@ void dumpGPS() {
 void initGPS() {
   if (sonde.config.gps_rxd < 0) return; // GPS disabled
   if (sonde.config.gps_txd >= 0) {  // TX enable, thus try setting baud to 9600 and do a factory reset
-    File testfile = SPIFFS.open("/GPSRESET", FILE_READ);
+    File testfile = LittleFS.open("/GPSRESET", FILE_READ);
     if (testfile && !testfile.isDirectory()) {
       testfile.close();
       Serial.println("GPS resetting baud to 9k6...");
@@ -209,7 +211,7 @@ void initGPS() {
       dumpGPS();
       delay(1000);
       dumpGPS();
-      SPIFFS.remove("/GPSRESET");
+      LittleFS.remove("/GPSRESET");
     } else if (testfile) {
       Serial.println("GPS reset file: not found/isdir");
       testfile.close();

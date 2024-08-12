@@ -115,7 +115,7 @@ void ConnAPRS::updateStation( PosInfo *pi ) {
 
     // We check for new connections or new data (tnc port) 
     if (!tncclient.connected()) {
-        tncclient = tncserver.available();
+        tncclient = tncserver.accept();
         if (tncclient.connected()) {
            Serial.println("new TCP KISS connection");
         }

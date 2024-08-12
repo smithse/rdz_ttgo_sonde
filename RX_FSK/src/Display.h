@@ -7,7 +7,7 @@
 #include <SPI.h>
 #include <Arduino_GFX_Library.h>
 #include <U8x8lib.h>
-#include <SPIFFS.h>
+#include <LittleFS.h>
 
 #include "posinfo.h"
 

@@ -23,7 +23,7 @@
 
 SX1278FSK::SX1278FSK() {}
 
-void SX1278FSK::setup(xSemaphoreHandle lock) 
+void SX1278FSK::setup(SemaphoreHandle_t lock) 
 {
 	_lock = lock;
 	Serial.println("Setup sx1278");
@@ -228,7 +228,7 @@ uint8_t SX1278FSK::setFSK()
 
 	//writeRegister(REG_FIFO_THRESH, 0x80);	// condition to start packet tx
 	//config1 = readRegister(REG_SYNC_CONFIG);
-	//config1 = config1 & B00111111;
+	//config1 = config1 & 0b00111111;
 	//writeRegister(REG_SYNC_CONFIG,config1);
 
 	delay(100);
@@ -610,7 +610,7 @@ int SX1278FSK::getMaxCurrent()
 	value = readRegister(REG_OCP);
 
 	// extract only the OcpTrim value from the OCP register
-	value &= B00011111;
+	value &= 0b00011111;
 
 	if( value <= 15 ) {
 		value = (45 + (5 * value));
@@ -665,7 +665,7 @@ int8_t SX1278FSK::setMaxCurrent(uint8_t rate)
 	else
 	{
 		// Enable Over Current Protection
-		rate |= B00100000;
+		rate |= 0b00100000;
 
 		//state = 1;
 		st0 = readRegister(REG_OP_MODE);	// Save the previous status
@@ -882,5 +882,5 @@ void SX1278FSK::showRxRegisters()
 }
 #endif
 
-xSemaphoreHandle globalLock =xSemaphoreCreateMutex();
+SemaphoreHandle_t globalLock =xSemaphoreCreateMutex();
 SX1278FSK sx1278 = SX1278FSK();

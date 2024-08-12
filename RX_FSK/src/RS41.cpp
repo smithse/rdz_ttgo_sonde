@@ -685,6 +685,12 @@ float GetRAHumidity( uint32_t humCurrent, uint32_t humMin, uint32_t humMax, floa
    return RH;
 }
 
+// ESP32 does not mind about non-aligned pointers (for reading floats from packed struct)
+#pragma GCC diagnostic push
+#if     __GNUC__ >= 9
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member" <<-- This key had been introduced since GCC 9
+#endif
+
 // returns: 0: ok, -1: rs or crc error
 int RS41::decode41(byte *data, int maxlen)
 {

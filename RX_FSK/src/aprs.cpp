@@ -148,7 +148,7 @@ extern int aprsstr_mon2raw(const char *mon, char raw[], int raw_len)
    uint32_t n;
    uint32_t i;
    uint32_t tmp;
-   int p = 7L;
+   int32_t p = 7L;
    i = 0UL;
    fprintf(stderr,"mon2raw for %s\n", mon);
    if (!mkaprscall(&p, raw, &i, mon, '>', 0, 0, 48UL)) {
