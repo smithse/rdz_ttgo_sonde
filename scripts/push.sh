@@ -28,9 +28,9 @@ generate_website_index() {
   for i in `ls main|sort -r`; do
     TS=`git log main/$i | grep "Date:" | head -1 | awk '{$1="";$2="";$7="";print substr($0,3,length($0)-3)}'`
     if [ -z "$TS" ]; then TS=`date`; fi
-    echo "<li><a href=\"main/$i\">$i</a> ($TS)</li>\n" >> download.html;
+    echo "<li><a href=\"main/$i\">$i</a> ($TS)</li>\n" >> download.html
   done
-  echo "</ul>"
+  echo "</ul>" >> download.html
   echo "<h2>Development repository (dev2)</h2><ul>" >> download.html
   for i in `ls dev2|sort -r|grep "\.bin"`; do
     TS=`git log dev2/$i | grep "Date:" | head -1 | awk '{$1="";$2="";$7="";print substr($0,3,length($0)-3)}'`
@@ -42,7 +42,7 @@ generate_website_index() {
     if [ -n "${CL}" ]; then echo "<br>${CL}" >> download.html; fi
     echo "</li>\n" >> download.html
   done
-  echo "</ul>"
+  echo "</ul>" >> download.html
 
   echo "<h2>Master repository (old IDF environment)</h2><ul>" >> download.html
   for i in `ls master|sort -r`; do
@@ -84,12 +84,12 @@ commit_website_files() {
   echo "On branch $BRANCH"
   echo "Version $VERSION"
   cd /tmp
-  git clone https://github.com/dl9rdz/rdz_ttgo_sonde.git -b gh-pages
+  git clone https://${GITHUB_API_KEY}@github.com/dl9rdz/rdz_ttgo_sonde.git -b gh-pages
   cd rdz_ttgo_sonde
   mkdir -p master
   mkdir -p devel
   mkdir -p main
-  mkdir -p dev
+  mkdir -p dev2
   cp ${FULLIMG} ${BRANCH}/${VERSION}-full.bin
   git add ${BRANCH}/${VERSION}-full.bin
   cp ${UPDIMG} ${BRANCH}/update.ino.bin
@@ -103,10 +103,12 @@ commit_website_files() {
   git commit --message "Build @ `date`"
 }
 upload_files() {
-  git remote add origin-pages https://${GITHUB_API_KEY}@github.com/dl9rdz/rdz_ttgo_sonde.git > /dev/null 2>&1
-  git push --quiet --set-upstream origin-pages gh-pages 
+  #git remote add origin-pages https://${GITHUB_API_KEY}@github.com/dl9rdz/rdz_ttgo_sonde.git > /dev/null 2>&1
+  #git push --quiet --set-upstream origin-pages gh-pages 
+  git push
 }
 setup_git
 commit_website_files
+#cd /tmp/rdz_ttgo_sonde
 generate_website_index
 upload_files
