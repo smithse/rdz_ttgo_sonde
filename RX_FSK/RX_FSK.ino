@@ -34,6 +34,7 @@
 
 #include "src/pmu.h"
 
+
 /* Data exchange connectors */
 #if FEATURE_CHASEMAPPER
 #include "src/conn-chasemapper.h"
@@ -287,7 +288,7 @@ void setupChannelList() {
   file.close();
 }
 
-const char *HTMLHEAD = "<html><head> <meta charset=\"UTF-8\"> <link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\">";
+const char *HTMLHEAD = "<!DOCTYPE html><html><head> <meta charset=\"UTF-8\"> <link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\">";
 void HTMLBODY(char *ptr, const char *which) {
   strcat(ptr, "<body><form class=\"wrapper\" action=\"");
   strcat(ptr, which);
@@ -657,7 +658,15 @@ struct st_configitems config_list[] = {
   {"mqtt.password", 63, &sonde.config.mqtt.password},
   {"mqtt.prefix", 63, &sonde.config.mqtt.prefix},
 #endif
-
+#if FEATURE_SDCARD
+  /* SD-Card settings */
+  {"sd.cs", 0, &sonde.config.sd.cs},
+  {"sd.miso", 0, &sonde.config.sd.miso},
+  {"sd.mosi", 0, &sonde.config.sd.mosi},
+  {"sd.clk", 0, &sonde.config.sd.clk},
+  {"sd.sync", 0, &sonde.config.sd.sync},
+  {"sd.name", 0, &sonde.config.sd.name},
+#endif
   /* Hardware dependeing settings */
   {"disptype", 0, &sonde.config.disptype},
   {"norx_timeout", 0, &sonde.config.norx_timeout},
@@ -1038,7 +1047,7 @@ const char *handleEditPost(AsyncWebServerRequest * request) {
 // will be removed. its now in data/upd.html (for GET; POST to update.html still handled here)
 const char *createUpdateForm(boolean run) {
   char *ptr = message;
-  strcpy(ptr, "<html><head><link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\"></head><body><form action=\"update.html\" method=\"post\">");
+  strcpy(ptr, "<!DOCTYPE html><html><head><link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\"></head><body><form action=\"update.html\" method=\"post\">");
   if (run) {
     strcat(ptr, "<p>Doing update, wait until reboot</p>");
   } else {
@@ -1230,16 +1239,38 @@ void SetupAsyncServer() {
     }
     request->send(SPIFFS, filename, "text/plain");
   });
+  
   server.on("/file", HTTP_POST,  [](AsyncWebServerRequest * request) {
     request->send(200);
   }, handleUpload);
+#if FEATURE_SDCARD
+  server.on("/sd/data.csv", HTTP_GET, [](AsyncWebServerRequest *request) {
+     Serial.println("Opening SD card file\n");
+     const File SDFile = SD.open("/data.csv", FILE_READ);
+     if(SDFile) { Serial.printf("SD file opened\n"); }
+     else { Serial.printf("SD file does not exist"); request->send(404); return; }
+     AsyncWebServerResponse *response = request->beginChunkedResponse("text/plain", [SDFile](uint8_t *buf, size_t maxLen, size_t index) -> size_t {
+       File SDLambdaFile = SDFile;
+       // if(maxLen>1024) maxLen=1024;
+       Serial.printf("[HTTP]\t[%d]\tINDEX [%d]\tBUFFER_MAX_LENGHT [%d]\r\n", index, SDLambdaFile.size(), maxLen);
+       return SDLambdaFile.read(buf, maxLen);
+     });
+     request->send(response);
+  });
+  server.serveStatic("/sd/", SD, "/");
+#endif
 
   server.on("/edit.html", HTTP_GET,  [](AsyncWebServerRequest * request) {
     // new version:
     // Open file
     // store file object in request->_tempObject
     //request->send(200, "text/html", createEditForm(request->getParam(0)->value()));
-    const String filename = request->getParam(0)->value();
+    AsyncWebParameter *param = request->getParam(0);
+    if(!param) {
+      request->send(404);
+      return;
+    }
+    const String filename = param->value();
     File file = SPIFFS.open("/" + filename, "r");
     int state = 0;
     request->send("text/html", 0, [state, file, filename](uint8_t *buffer, size_t maxLen, size_t index) mutable -> size_t  {
@@ -1252,9 +1283,13 @@ void SetupAsyncServer() {
     if (ret == NULL)
       request->send(200, "text/html", "<html><head>ERROR</head><body><p>Something went wrong (probably ESP32 out of memory). Uploaded file is empty.</p></body></hhtml>");
     else {
-      String f = request->getParam(0)->value();
+      AsyncWebParameter *param = request->getParam(0);
+      if(!param) {
+         request->send(404);
+         return;
+      }
+      String f = param->value();
       request->redirect("/edit.html?file=" + f);
-      //request->send(200, "text/html", createEditForm(request->getParam(0)->value()));
     }
   },
   NULL,
@@ -1265,8 +1300,12 @@ void SetupAsyncServer() {
   // Route to load style.css file
   server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest * request) {
     AsyncWebServerResponse *response = request->beginResponse(SPIFFS, "/style.css", "text/css");
-    response->addHeader("Cache-Control", "max-age=86400");
-    request->send(response);
+    if(response) {
+      response->addHeader("Cache-Control", "max-age=86400");
+      request->send(response);
+    } else {
+      request->send(404);
+    }
   });
 
   server.on("/live.kml", HTTP_GET, [](AsyncWebServerRequest * request) {
@@ -1296,7 +1335,10 @@ void SetupAsyncServer() {
         // This happens with concurrent requests, notably if a browser fetches rdz.js and cfg.js concurrently for config.html
         // With the cache, rdz.js is likely already in the cache...0
         Serial.printf("URL is %s\n", url.c_str());
-        AsyncWebServerResponse *response = request->beginResponse(SPIFFS, url, "text/html");
+	const char *type = "text/html";
+        if(url.endsWith(".js")) type="text/javascript";
+        Serial.printf("Responding with type %si (url %s)\n", type, url.c_str());
+        AsyncWebServerResponse *response = request->beginResponse(SPIFFS, url, type);
         if(response) {
           response->addHeader("Cache-Control", "max-age=900"); 
           request->send(response);
@@ -1693,14 +1735,13 @@ void setup()
   char buf[12];
 
   // Open serial communications and wait for port to open:
-  Serial.begin(/*921600 */115200);
+  Serial.begin(115200);
   for (int i = 0; i < 39; i++) {
     int v = gpio_get_level((gpio_num_t)i);
     Serial.printf("%d:%d ", i, v);
   }
 
-  //NimBLEDevice::init("NimBLE-Arduino");
-  //NimBLEServer* pServer = NimBLEDevice::createServer();;
+#ifndef REMOVE_ALL_FOR_TESTING
 
   Serial.println("");
 #ifdef ESP_MEM_DEBUG
@@ -1810,10 +1851,8 @@ void setup()
 
   setupWifiList();
   Serial.printf("before disp.initFromFile... layouts is %p\n", disp.layouts);
-  Serial.printf("test\n");
-
   disp.initFromFile(sonde.config.screenfile);
-  Serial.printf("disp.initFromFile... layouts is %p", disp.layouts);
+  Serial.printf("disp.initFromFile... layouts is %p\n", disp.layouts);
 
 
   // == show initial values from config.txt ========================= //
@@ -1929,9 +1968,25 @@ void setup()
 #if FEATURE_APRS
   connAPRS.init();
 #endif
+#if FEATURE_SDCARD
+  connSDCard.init();
+#endif
 
   WiFi.onEvent(WiFiEvent);
   getKeyPress();    // clear key buffer
+
+#else
+/// DEBUG ONLY
+  WiFi.begin("Dinosauro", "03071975");
+  while(!WiFi.isConnected()) { delay(500); Serial.print(":"); }
+  Serial.println("... WiFi is connected!\n");
+  SetupAsyncServer();
+  sonde.config.sd.cs = 13;
+  sonde.config.sd.clk = 14;
+  sonde.config.sd.miso = 2;
+  sonde.config.sd.mosi = 15;
+  connSDCard.init();
+#endif
 }
 
 void enterMode(int mode) {
@@ -2882,6 +2937,8 @@ int fetchHTTPheader(int *validType) {
 void loop() {
   Serial.printf("\nMAIN: Running loop in state %d [currentDisp:%d, lastDisp:%d]. free heap: %d, unused stack: %d\n",
                 mainState, currentDisplay, lastDisplay, ESP.getFreeHeap(), uxTaskGetStackHighWaterMark(0));
+
+#ifndef REMOVE_ALL_FOR_TESTING
   switch (mainState) {
     case ST_DECODER:
 #ifndef DISABLE_MAINRX
@@ -2911,7 +2968,9 @@ void loop() {
     sonde.updateDisplay();
     lastDisplay = currentDisplay;
   }
-
+#else
+  delay(1000);
+#endif
 }
 
 

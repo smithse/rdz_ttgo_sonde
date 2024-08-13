@@ -106,6 +106,10 @@ void Sonde::defaultConfig() {
 	config.sx1278_sck = SCK;
 	// config.oled_rst = 16;
 	config.oled_rst = -1;   // GPIO16 is Flash CS on Lora32 v1.6
+	config.sd.cs = -1;
+	config.sd.miso = -1;
+	config.sd.mosi = -1;
+	config.sd.clk = -1;
 	config.disptype = 0;
 	config.dispcontrast = -1;
 	config.tft_orient = 1;
@@ -225,6 +229,10 @@ void Sonde::defaultConfig() {
 			config.button2_pin = 14 + 128;   // GPIO14 / T6
 			config.led_pout = 25;
 			config.batt_adc = 35; 
+			config.sd.cs = 13;
+			config.sd.miso = 2;
+			config.sd.mosi = 15;
+			config.sd.clk = 14;
 		}
 	}
 	//

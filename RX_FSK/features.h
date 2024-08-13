@@ -34,7 +34,7 @@
    // Safeboot image is a minimalistic version that only includes WiFi / OTA functionality
 #define FEATURE_SONDEHUB 0
 #define FEATURE_MQTT 0
-#define FEATURE_SDARD 0
+#define FEATURE_SDCARD 0
 #define FEATURE_APRS 0
 #define LEGACY_FONTS_IN_CODEBIN 0
 #endif

@@ -39,5 +39,7 @@ private:
 
 };
 
+extern ConnSDCard connSDCard;
+
 
 #endif

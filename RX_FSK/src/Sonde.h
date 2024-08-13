@@ -229,6 +229,15 @@ struct st_sondehub {
 	double fimaxage;
 };
 
+struct st_sdcard {
+	int cs;
+	int miso;
+	int mosi;
+	int clk;
+	int sync;
+	int name;
+};
+
 // to be extended
 enum { TYPE_TTGO, TYPE_M5_CORE2 };
 
@@ -297,6 +306,7 @@ typedef struct st_rdzconfig {
 	struct st_mqtt mqtt;
 	struct st_sondehub sondehub;
 	struct st_cm cm;
+	struct st_sdcard sd;
 } RDZConfig;
 
 
