@@ -17,7 +17,7 @@
 	<a href="#ctrl" onclick="selTab(event,'Control')" class="tablinks">Control</a>
 	<a href="#config" onclick="selTab(event,'Config')" class="tablinks">Config</a>
 	<a href="#wifi" onclick="selTab(event,'WiFi')" class="tablinks">WiFi</a>
-	<a href="#about" onclick="selTab(event,'About')" class="tablinks">About</a>
+	<a href="#about" onclick="selTab(event,'About');fetchStatus()" class="tablinks">About</a>
 	<a href="javascript:void(0);" class="icon" onclick="myFunction()">
 		<span class="hamburger"></span>
 	</a>
@@ -50,36 +50,60 @@
 
 <div id="About" class="tabcontent">
 <div class="tci">
-   %VERSION_NAME%<br>
-   Copyright &copy; 2019-2024 by Hansi Reiser, DL9RDZ<br>
-   (version %VERSION_ID%)<br><br>
-
-   <a href="/upd.html">Check for update (requires TTGO internet connection via WiFi)</a><br><br>
-
-   with contributions by Vigor and Xavier (M20 support), 
-   <a href="https://github.com/LukePrior">Luke Prior</a> and <a href="https://github.com/oh3bsg">OH3BSG</a> (SondeHub support),
-   <a href="https://www.dl2mf.de/" target="_blank">Meinhard Guenther, DL2MF</a>,
-   <a href="https://github.com/bazjo">Johannes</a>, <a href="http://www.p1337.synology.me/dokuwiki/doku.php?id=public:wettersonden">Robert Stefanowicz</a>,
-   <a href="https://github.com/puspis">Josema</a>, and probably some more people I forgot to mention here.
-
-<br>
-   <br>
-   Autodetect info: %AUTODETECT_INFO%<br>
-   <br>
-    RS92 RINEX eph state: %EPHSTATE%<br>
-    <br>
+<div class="system-info">
+<h1>%VERSION_NAME% version %VERSION_ID%</h1>
+<p>Autodetect info: %AUTODETECT_INFO%</p>
+<p>Copyright &copy; 2019-2024 by Hansi Reiser, DL9RDZ and contributors</p>
+<p>
     This program is free software; you can redistribute it and/or
-    modify it under the terms of the GNU General Public License as
+    modify it under the terms of the <a href="https://www.gnu.org/licenses/gpl-2.0.txt">GNU General Public License</a> as
     published by the Free Software Foundation; either version 2 of
-    the License, or (at your option) any later version.<br>
-    See <a href="https://www.gnu.org/licenses/gpl-2.0.txt">https://www.gnu.org/licenses/gpl-2.0.txt</a>
-    for details.
+    the License, or (at your option) any later version. 
+    See <a href="https://github.com/dl9rdz/rdz_ttgo_sonde/">https://github.com/dl9rdz/rdz_ttgo_sonde/</a>
+    for details, contributors, and license exceptions of third-party components.
+</p>
+<p><a href="/upd.html">Check for update (requires TTGO internet connection via WiFi)</a></p>
+<table class="status-table">
+<thead>
+ <tr>
+ <th>Component</th><th>Status<button id="refresh-button" onclick="fetchStatus()">[refresh]</button></th>
+ </tr>
+</thead>
+<tbody id="status-body">
+</tbody>
+</table>
+<p>RS92 RINEX eph state: %EPHSTATE%</p>
 </div>
 <div class="footer"><span></span><span class="ttgoinfo">rdzTTGOserver %VERSION_ID%</span></div>
 </div>
 
 </div>
 <script>
+function fetchStatus() {
+  fetch('/status.json')
+      .then(response => response.json())
+      .then(data => {
+          const statusBody = document.getElementById('status-body');
+          statusBody.innerHTML = ''; // Clear existing rows
+    
+          for (const [subsystem, status] of Object.entries(data)) {
+              const row = document.createElement('tr');
+
+              const subsystemCell = document.createElement('td');
+              subsystemCell.textContent = subsystem;
+              row.appendChild(subsystemCell);
+    
+              const statusCell = document.createElement('td');
+              statusCell.innerHTML = status; 
+              row.appendChild(statusCell);
+    
+              statusBody.appendChild(row);
+          }
+      })
+      .catch(error => {
+          console.error('Error fetching subsystem status:', error);
+      });
+} 
 function selTab(evt, id) {
 	var i, tabcontent, tablinks;
 	tabcontent=document.getElementsByClassName("tabcontent");

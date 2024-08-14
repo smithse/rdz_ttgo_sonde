@@ -11,6 +11,7 @@ public:
 	void updateSonde( SondeInfo *si );
 	void updateStation( PosInfo *pi );
         String getStatus();
+	String getName();
 };
 
 extern ConnChasemapper connChasemapper;

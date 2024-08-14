@@ -68,5 +68,9 @@ String ConnChasemapper::getStatus() {
 	return String("");
 }
 
+String ConnChasemapper::getName() {
+	return String("Chasemapper");
+}
+
 ConnChasemapper connChasemapper;
 #endif

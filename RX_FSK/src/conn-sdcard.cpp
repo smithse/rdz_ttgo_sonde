@@ -3,12 +3,25 @@
 #if FEATURE_SDCARD
 
 #include "conn-sdcard.h"
+#include <dirent.h>
+#include <time.h>
 
 static SPIClass sdspi(HSPI);
+
+char *cardTypeStr(uint8_t cardtype) {
+  switch(cardtype) {
+     case CARD_NONE: return "No SD card attached";
+     case CARD_MMC: return "MMC";
+     case CARD_SD: return "SDSC";
+     case CARD_SDHC: return "SDHC";
+     default: return "unknown";
+  }
+}
 
 void ConnSDCard::init() {
   if(sonde.config.sd.clk==-1)
     return;
+
   /* Initialize SD card */
   // SPI (==VSPI) is used by SX127x. 
   // On LoRa32, SD-Card is on different pins, so cannot share VSPI
@@ -17,27 +30,13 @@ void ConnSDCard::init() {
   initok = SD.begin(sonde.config.sd.cs, sdspi);
   Serial.printf("SD card init: %s\n", initok ? "OK" : "Failed");
   uint8_t cardType = SD.cardType();
+  Serial.printf("SD Card Type: %s\n", cardTypeStr(cardType));
+  if (cardType == CARD_NONE) { return; }
 
-  if (cardType == CARD_NONE) {
-    Serial.println("No SD card attached");
-    return;
-  }
-
-  Serial.print("SD Card Type: ");
-  if (cardType == CARD_MMC) {
-    Serial.println("MMC");
-  } else if (cardType == CARD_SD) {
-    Serial.println("SDSC");
-  } else if (cardType == CARD_SDHC) {
-    Serial.println("SDHC");
-  } else {
-    Serial.println("UNKNOWN");
-  }
-  uint64_t cardSize = SD.cardSize() / (1024 * 1024);
+  uint32_t cardSize = SD.cardSize() / (1024 * 1024);
   Serial.printf("SD Card Size: %luMB\n", cardSize);
-  uint64_t usedSize = SD.usedBytes() / (1024 * 1024);
-  //uint64_t totalSize = SD.totalBytes() / (1024 * 1024);
-  uint64_t totalSize = SD.totalBytes();
+  uint32_t usedSize = SD.usedBytes() / (1024 * 1024);
+  uint32_t totalSize = SD.totalBytes() / (1024 * 1024);
   Serial.printf("SD Card used/total: %lu/%lu MB\n", usedSize, totalSize);
 
   file = SD.open("/data.csv", FILE_APPEND);
@@ -49,14 +48,30 @@ void ConnSDCard::init() {
   file.close();
 
   //sdf = SD.open("/data.csv", FILE_READ);
+
+#if 0
+  // Just testcode
+  DIR *dir = opendir("/sd/");
+  struct dirent *dent;
+  struct stat attr;
+  char fname[1024];
+  strcpy(fname,"/sd/");
+  if(dir) {
+    while((dent=readdir(dir))!=NULL) {
+      strcpy(fname+4, dent->d_name);
+      stat(fname, &attr);
+      char ftim[50];
+      strftime(ftim, 50, "%Y-%m-%d %H:%M:%S", gmtime(&attr.st_mtime)); 
+      printf("%s %s %d\n", dent->d_name, ftim, attr.st_size);
+      
+    }
+    closedir(dir);
+  }
+#endif
 }
 
 void ConnSDCard::netsetup() {
   /* empty function, we don't use any network here */
-}
-
-String ConnSDCard::getStatus() {
-  return String("");
 }
 
 // Rotation by time or by id.
@@ -86,6 +101,26 @@ void ConnSDCard::updateSonde( SondeInfo *si ) {
 
 
 void ConnSDCard::updateStation( PosInfo *pi ) {
+}
+
+String ConnSDCard::getStatus() {
+  if(sonde.config.sd.cs == -1) { return String("Disabled"); }
+  if(!initok) { return String("SD card init failed"); }
+
+  uint8_t cardType = SD.cardType();
+  if (cardType == CARD_NONE) { return String(cardTypeStr(cardType)); }
+
+  uint32_t cardSize = SD.cardSize() / (1024 * 1024);
+  uint32_t usedSize = SD.usedBytes() / (1024 * 1024);
+  uint32_t totalSize = SD.totalBytes() / (1024 * 1024);
+  char buf[256];
+  snprintf(buf, 256, "SD card type: %s [size: %lu MB]. File system: %lu / %lu MB free", cardTypeStr(cardType),
+    cardSize, usedSize, totalSize);
+  return String(buf);
+}
+
+String ConnSDCard::getName() {
+  return String("SD Card");
 }
 
 

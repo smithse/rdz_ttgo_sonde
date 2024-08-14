@@ -36,5 +36,8 @@ public:
 
 	/* Called to retrieve status (used for Info in about tab) */
 	virtual String getStatus();
+
+        /* Called to retrieve the name of this connector (for status display) */
+	virtual String getName();
 };
 #endif

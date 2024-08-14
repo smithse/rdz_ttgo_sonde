@@ -31,6 +31,8 @@ public:
 
 	String getStatus();
 
+	String getName();
+
 private:
 	void aprs_station_update();
 };

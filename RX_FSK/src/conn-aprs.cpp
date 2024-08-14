@@ -129,10 +129,6 @@ void ConnAPRS::updateStation( PosInfo *pi ) {
     }
 }
 
-String ConnAPRS::getStatus() {
-    return String("");
-}
-
 void ConnAPRS::aprs_station_update() {
   int chase = sonde.config.chase;
   if (chase == SH_LOC_OFF) // do not send any location
@@ -320,6 +316,35 @@ error:
     return;
 }
 
+const char *aprsstate2str(int state) {
+  switch(state) {
+  case TCS_DISCONNECTED: return "Disconnected";
+  case TCS_DNSLOOKUP: return "DNS lookup";
+  case TCS_DNSRESOLVED: return "DNS resolved";
+  case TCS_CONNECTING: return "Connecting";
+  case TCS_LOGIN: return "Login";
+  case TCS_CONNECTED: return "Connected";
+  default: return "??";
+  }
+}
+
+String ConnAPRS::getStatus() {
+    char buf[1024];
+    // AXUDP: enabled or disabled
+    strlcpy(buf, sonde.config.udpfeed.active ? "AXUDP enabled<br>":"AXUDP disabled<br>", 1024);
+    // KISS TNC: disabled, enabled(idle), enabled(client connected)
+    if(sonde.config.kisstnc.active==0) strlcat(buf, "KISS TNC: disabled<br>", 1024);
+    else if (tncclient.connected()) strlcat(buf, "KISS TNC: server active, client connected<br>", 1024);
+    else strlcat(buf, "KISS TNC: server active, idle<br>", 1024 );
+    // APRS client
+    if(sonde.config.tcpfeed.active==0) strlcat(buf, "APRS: disabled", 1024);
+    else snprintf( buf+strlen(buf), 1024-strlen(buf), "APRS: %s: %s", sonde.config.tcpfeed.host, aprsstate2str(tcpclient_state));
+    return String(buf);
+}
+
+String ConnAPRS::getName() {
+    return String("APRS");
+}
 
 ConnAPRS connAPRS;
 

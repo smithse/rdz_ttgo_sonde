@@ -23,9 +23,11 @@ public:
         virtual void updateSonde( SondeInfo *si );
 
         /* Called approx 1x / second* */
-        virtual void updateStation( PosInfo *pi );
+        void updateStation( PosInfo *pi );
 
-	virtual String getStatus();
+	String getStatus();
+
+        String getName();
 
 private:
     WiFiClient mqttWifiClient;

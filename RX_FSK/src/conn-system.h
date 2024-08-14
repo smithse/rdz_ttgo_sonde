@@ -6,15 +6,13 @@
  * SPDX-License-Identifier: GPL-2.0+
  */
 
-#ifndef conn_sdcard_h
-#define conn_sdcard_h
+#ifndef conn_system_h
+#define conn_system_h
 
 #include "conn.h"
 
-//#include "FS.h"
-#include "SD.h"
 
-class ConnSDCard : public Conn
+class ConnSystem : public Conn
 {
 public:
         /* Called once on startup */
@@ -23,25 +21,21 @@ public:
         /* Called whenever the network becomes available */
         void netsetup();
 
-
         /* Called approx 1x / second (maybe only if good data is available) */
-        void updateSonde( SondeInfo *si );
+        virtual void updateSonde( SondeInfo *si );
 
         /* Called approx 1x / second* */
-        void updateStation( PosInfo *pi );
+        virtual void updateStation( PosInfo *pi );
 
         String getStatus();
 
-	String getName();
+        String getName();
 
 private:
-	File file;
-	uint8_t initok = 0;
-	uint16_t wcount = 0;
 
 };
 
-extern ConnSDCard connSDCard;
+extern ConnSystem connSystem;
 
 
 #endif

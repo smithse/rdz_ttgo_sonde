@@ -1,4 +1,6 @@
 #include "../features.h"
+#include <sstream>
+#include <iomanip>
 
 #if FEATURE_SONDEHUB
 
@@ -25,6 +27,16 @@ WiFiClient shclient;    // Sondehub v2
 int shImportInterval = 0;
 char shImport = 0;
 unsigned long time_last_update = 0;
+
+enum SHState { SH_DISCONNECTED, SH_CONNECTING, SH_CONN_IDLE, SH_CONN_APPENDING, SH_CONN_WAITACK };
+
+SHState shState = SH_DISCONNECTED;
+time_t shStart = 0;
+
+#define MSG_SIZE 1000
+static char rs_msg[MSG_SIZE];
+
+static String response;
 
 void ConnSondehub::init() {
 }
@@ -60,9 +72,6 @@ void ConnSondehub::updateStation( PosInfo *pi ) {
     // Currently, interlnal reply_handler does this, using gpsInfo global variable instead of this pi
 }
 
-String ConnSondehub::getStatus() {
-	return String("");
-}
 
 /*** Code moved from RX_FSK to here ****/
 
@@ -105,6 +114,7 @@ void ConnSondehub::sondehub_station_update() {
       return;
     }
   }
+  shState = SH_CONN_IDLE;
 
   w = data;
   // not necessary...  memset(w, 0, STATION_DATA_LEN);
@@ -177,7 +187,7 @@ void ConnSondehub::sondehub_station_update() {
   // If any of the shclient.print failed before (remote end closed connection),
   // then calling client->read will cause a LoadProhibited exception
   if (shclient.connected()) {
-    String response = shclient.readString();
+    response = shclient.readString();
     Serial.println(response);
     Serial.println("Response done...");
   } else {
@@ -189,19 +199,11 @@ void ConnSondehub::sondehub_station_update() {
 /*
         Update sonde data to the sondehub v2 DB
 */
-enum SHState { SH_DISCONNECTED, SH_CONNECTING, SH_CONN_IDLE, SH_CONN_APPENDING, SH_CONN_WAITACK };
-
-SHState shState = SH_DISCONNECTED;
-time_t shStart = 0;
-
-
 
 void ConnSondehub::sondehub_reply_handler() {
   // sondehub handler for tasks to be done even if no data is to be sent:
   //   process response messages from sondehub
   //   request frequency list (if active)
-#define MSG_SIZE 1000
-  char rs_msg[MSG_SIZE];
 
   if (shImport == 1) { // we are waiting for a reply to a sondehub frequency import request
     // while we are waiting, we do nothing else with sondehub...
@@ -571,8 +573,75 @@ void ConnSondehub::sondehub_send_last() {
   Serial.printf("1\r\n]\r\n0\r\n\r\n");
 }
 
+static const char *state2str(SHState state) {
+  switch(state) {
+  case SH_DISCONNECTED: return "Disconnected";
+  case SH_CONNECTING: return "Connecting";
+  case SH_CONN_IDLE: return "Connected: Idle";
+  case SH_CONN_APPENDING: return "Connected: Sending data";
+  case SH_CONN_WAITACK: return "Connected: Waiting for ACK from server";
+  default: return "??";
+  }
+}
 
 
+#if 0
+String escape_json(const String &s) {
+    // bad idea. This adds 200k of code size :-(
+    std::ostringstream o;
+    for(const char *c = s.c_str(); *c!=0; c++) {
+        if (*c == '"' || *c == '\\' || ('\x00' <= *c && *c <= '\x1f')) {
+            o << "\\u"
+              << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(*c);
+        } else {
+            o << *c;
+        }
+    }
+    return String(o.str().c_str());
+    return String("");
+}
+#endif
+
+// take first line (until \r), skip until \r\r, 
+void escape_json(char *dst, const char *src, int maxlen) {
+    int state = 0;
+    while (*src && maxlen>1) {
+        if(state==0) { if(*src=='\r') { state=1; src++; *dst++=' '; maxlen--; continue; } }  // take first line
+        if(state==1) { if(*src=='\r') { state=2; } src++; continue; }
+        if(state==2) { if(*src!='\r' && *src!='\n') { state=1; } if(*src=='\r') { state=3; } src++; continue; }
+    
+        if (*src == '"' || *src == '\\' || ('\x00' <= *src && *src <= '\x1f')) {
+            snprintf(dst, maxlen, "\\u%04d", (int)*src);
+            int n = strlen(dst);
+            maxlen -= n;
+            dst += n;
+	    src++;
+        } else {
+            *dst++ = *src++; maxlen--;
+        }
+    }
+    *dst = 0;
+}
+
+
+String ConnSondehub::getStatus() {
+  char info[1200];
+  time_t now;
+  time(&now);
+  if(shStart==0) now=-1;
+  snprintf(info, 1200, "State: %s. Last upload start: %ld s ago<br>Last reply: %s",
+      state2str(shState), (uint32_t)(now-shStart), rs_msg);
+  if(response)  {
+     strlcat(info, "<br>Response: ", 1200);
+     int n = strlen(info);
+     escape_json(info+n, response.c_str(), 1200-n);
+  }
+  return String(info);
+}
+
+String ConnSondehub::getName() {
+  return String("Sondehub");
+}
 
 
 

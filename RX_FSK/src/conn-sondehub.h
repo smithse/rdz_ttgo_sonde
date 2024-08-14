@@ -24,6 +24,8 @@ public:
 
         String getStatus();
 
+        String getName();
+
 private:
 	void sondehub_station_update();
 	void sondehub_reply_handler();

@@ -1,0 +1,14 @@
+
+Action handler:
+
+Events:
+- Reboot done
+- For each sonde:
+     * new 
+     * burst
+     * within range X km
+     * descending, below X m
+     * within range X kam and descending, below X
+
+Event file:
+

@@ -83,4 +83,3 @@ function qrgTable() {
   prep();
   footer();
 }
-

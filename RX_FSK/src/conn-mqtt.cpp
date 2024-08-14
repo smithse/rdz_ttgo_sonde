@@ -87,10 +87,6 @@ void MQTT::updateStation( PosInfo *pi ) {
     }
 }
 
-String MQTT::getStatus() {
-    return String("");
-}
-
 // Internal (private) functions
 int MQTT::connectToMqtt() {
   if(mqttClient.connected())
@@ -143,6 +139,14 @@ void MQTT::publishPacket(SondeInfo *si)
     snprintf(topic, 128, "%s%s", sonde.config.mqtt.prefix, "packet");
     Serial.print(payload);
     mqttClient.publish(topic, 1, 1, payload);
+}
+
+String MQTT::getStatus() {
+    return String("");
+}
+
+String MQTT::getName() {
+    return String("MQTT");
 }
 
 MQTT connMQTT;

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>rdzTTGOsonde SD card file browser</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        h1 {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>SD Card Directory Listing</h1>
+    <table id="fileTable">
+        <thead>
+            <tr>
+                <th>Filename</th>
+                <th>Size (bytes)</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- File entries will be inserted here -->
+        </tbody>
+    </table>
+
+    <script>
+        // Fetch JSON data from the server
+        fetch('/sd/files.json')
+            .then(response => response.json())
+            .then(data => {
+                const tableBody = document.getElementById('fileTable').getElementsByTagName('tbody')[0];
+
+                // Iterate over the files and create table rows
+                data.forEach(file => {
+                    const row = document.createElement('tr');
+
+                    const nameCell = document.createElement('td');
+                    const sizeCell = document.createElement('td');
+                    const tsCell = document.createElement('td');
+
+                    // Create an anchor element for the filename
+                    const link = document.createElement('a');
+                    link.href = `/sd/${file.name}`;
+                    link.textContent = file.name;
+                    nameCell.appendChild(link);
+
+                    sizeCell.textContent = file.size;
+                    tsCell.textContent = file.ts;
+
+                    row.appendChild(nameCell);
+                    row.appendChild(sizeCell);
+                    row.appendChild(tsCell);
+
+                    tableBody.appendChild(row);
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching file list:', error);
+            });
+    </script>
+</body>
+</html>
+

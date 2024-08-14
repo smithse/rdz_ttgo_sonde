@@ -2,6 +2,8 @@
 #include "version.h"
 #include "core.h"
 
+#include <dirent.h>
+
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include <ESPAsyncWebServer.h>
@@ -51,6 +53,20 @@
 #if FEATURE_SONDEHUB
 #include "src/conn-sondehub.h"
 #endif
+
+#include "src/conn-system.h"
+
+Conn *connectors[] = { &connSystem,
+#if FEATURE_APRS
+&connAPRS,
+#endif
+#if FEATURE_SONDEHUB
+&connSondehub,
+#endif
+#if FEATURE_SDCARD
+&connSDCard,
+#endif
+NULL };
 
 //#define ESP_MEM_DEBUG 1
 //int e;
@@ -1250,14 +1266,41 @@ void SetupAsyncServer() {
      if(SDFile) { Serial.printf("SD file opened\n"); }
      else { Serial.printf("SD file does not exist"); request->send(404); return; }
      AsyncWebServerResponse *response = request->beginChunkedResponse("text/plain", [SDFile](uint8_t *buf, size_t maxLen, size_t index) -> size_t {
-       File SDLambdaFile = SDFile;
+       File sdlf = SDFile;
        // if(maxLen>1024) maxLen=1024;
-       Serial.printf("[HTTP]\t[%d]\tINDEX [%d]\tBUFFER_MAX_LENGHT [%d]\r\n", index, SDLambdaFile.size(), maxLen);
-       return SDLambdaFile.read(buf, maxLen);
+       Serial.printf("[HTTP]\t[%d]\tINDEX [%d]\tBUFFER_MAX_LENGHT [%d]\r\n", index, sdlf.size(), maxLen);
+       return sdlf.read(buf, maxLen);
      });
      request->send(response);
   });
   server.serveStatic("/sd/", SD, "/");
+  server.on("/sd/files.json", HTTP_GET, [](AsyncWebServerRequest *request) {
+    DIR *dir = opendir("/sd/");
+    struct dirent *dent;
+    AsyncWebServerResponse *response = request->beginChunkedResponse("application/json", [dir, dent](uint8_t *buf, size_t maxLen, size_t index) mutable -> size_t {
+      Serial.printf("[HTTP]\tINDEX [%d]\tBUFFER_MAX_LENGHT [%d]\r\n", index, maxLen);
+      if(index==0) {
+        dent = readdir(dir);
+        strcpy((char *)buf, "[ \n");
+        if(dent==NULL) { strcpy( (char*)buf+2, "]"); return 3; }
+        return 3;
+      }
+      if(dent) {
+        char fname[128];
+        struct stat attr;
+        char ftim[50];
+        snprintf(fname, 128, "/sd/%s", dent->d_name);
+        stat(fname, &attr);
+        strftime(ftim, 50, "%Y-%m-%dT%H:%M:%SZ", gmtime(&attr.st_mtime)); 
+        snprintf((char *)buf, maxLen, "{\"name\":\"%s\", \"size\":%d, \"ts\":\"%s\"}", dent->d_name, attr.st_size, ftim);
+        dent = readdir(dir);
+        if(dent) strcat((char *)buf, ",\n");
+        else strcat((char *)buf, "\n]\n");
+        return strlen((char *)buf);
+      } else { return 0; }
+    });
+    request->send(response);
+  });
 #endif
 
   server.on("/edit.html", HTTP_GET,  [](AsyncWebServerRequest * request) {
@@ -1320,6 +1363,19 @@ void SetupAsyncServer() {
     request->send(SPIFFS, "/upd.html", String(), false, processor);
   });
 
+  server.on("/status.json", HTTP_GET, [](AsyncWebServerRequest * request) {
+   int nr = 0;
+   AsyncWebServerResponse *response = request->beginChunkedResponse("application/json", [nr](uint8_t *buf, size_t maxLen, size_t index) mutable-> size_t {
+       if(connectors[nr]==NULL) return 0;
+       if(index==0) { strcpy((char *)buf, "{"); buf++; maxLen--; } else *buf=0;
+       snprintf( (char *)buf, maxLen-2, "\"%s\": \"%s\"\n", connectors[nr]->getName().c_str(), connectors[nr]->getStatus().c_str() );
+       nr++;
+       strcat((char *)buf, connectors[nr]==NULL ? "}\n":",\n");
+       return strlen((char *)buf);
+     }); 
+     request->send(response);
+  });
+
   server.onNotFound([](AsyncWebServerRequest * request) {
     if (request->method() == HTTP_OPTIONS) {
       request->send(200);
@@ -1337,7 +1393,7 @@ void SetupAsyncServer() {
         Serial.printf("URL is %s\n", url.c_str());
 	const char *type = "text/html";
         if(url.endsWith(".js")) type="text/javascript";
-        Serial.printf("Responding with type %si (url %s)\n", type, url.c_str());
+        Serial.printf("Responding with type %s (url %s)\n", type, url.c_str());
         AsyncWebServerResponse *response = request->beginResponse(SPIFFS, url, type);
         if(response) {
           response->addHeader("Cache-Control", "max-age=900"); 
@@ -2283,8 +2339,11 @@ String translateEncryptionType(wifi_auth_mode_t encryptionType) {
 
 t_wifi_state wifi_state = WIFI_DISABLED;
 
+uint32_t netup_time;
+
 void enableNetwork(bool enable) {
   if (enable) {
+    netup_time = esp_timer_get_time() / 1000000;
     MDNS.begin(sonde.config.mdnsname);
     SetupAsyncServer();
     udp.begin(WiFi.localIP(), LOCALUDPPORT);
