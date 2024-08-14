@@ -3,12 +3,14 @@
 #if FEATURE_SDCARD
 
 #include "conn-sdcard.h"
+#include "posinfo.h"
+
 #include <dirent.h>
 #include <time.h>
 
 static SPIClass sdspi(HSPI);
 
-char *cardTypeStr(uint8_t cardtype) {
+const char *cardTypeStr(uint8_t cardtype) {
   switch(cardtype) {
      case CARD_NONE: return "No SD card attached";
      case CARD_MMC: return "MMC";
@@ -75,23 +77,38 @@ void ConnSDCard::netsetup() {
 }
 
 // Rotation by time or by id.
+// only by id for now.
+static char logName[20], logOldName[20] = {0};
+
+static void is_to_logname(char *name, int maxlen, SondeData *sd) {
+  if(sd->validID) snprintf(name, maxlen, "/%s.csv", sd->ser);
+  else strncpy(name, "/noid.csv", maxlen);
+}
 
 void ConnSDCard::updateSonde( SondeInfo *si ) {
   if (!initok) return;
-  if (!file) {
-    file = SD.open("/data.csv", FILE_APPEND);
+  SondeData *sd = &si->d;
+  is_to_logname(logName, 20, sd);
+
+  if(strcmp(logName, logOldName) || !file) {
+    if(file) file.close();
+    file = SD.open(logName, FILE_APPEND);
+    strcpy(logOldName, logName);
+    Serial.printf("Logging to file %s\n", logName);
   }
   if (!file) {
     Serial.println("Error opening file");
     return;
   }
-  SondeData *sd = &si->d;
   file.printf("%d,%s,%s,%d,"
               "%f,%f,%f,%f,%f,%f,%d,%d,"
               "%d,%d,%d,%d\n",
               sd->validID, sd->ser, sd->typestr, sd->subtype,
               sd->lat, sd->lon, sd->alt, sd->vs, sd->hs, sd->dir, sd->sats, sd->validPos,
               sd->time, sd->frame, sd->vframe, sd->validTime);
+
+  // TODO: Make this time based, not invocation based (well, should be the same, this is called
+  // 1x per second)
   wcount++;
   if (wcount >= sonde.config.sd.sync) {
     file.flush();
@@ -99,8 +116,29 @@ void ConnSDCard::updateSonde( SondeInfo *si ) {
   }
 }
 
+static StationPos lastPI={0};
 
+// TODO: This needs some cleanup.
+// Code uses global varuable posInfo, not this PosInfo paramter (also in aprs, sondehub)
 void ConnSDCard::updateStation( PosInfo *pi ) {
+  if (!initok) return;
+  if( lastPI.lat == posInfo.lat && lastPI.lon == posInfo.lon) return;
+  
+  File posfile = SD.open("/mypos.csv", FILE_APPEND);
+  if(!posfile) {
+    Serial.println("Error opening /mypos.csv");
+    return;
+  }
+  char ftim[50];
+  struct tm timeinfo;
+  time_t now;
+  time(&now);
+  gmtime_r(&now, &timeinfo);
+  strftime(ftim, 50, "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
+
+  posfile.printf("%s,%.6f,%.6f\n", ftim, posInfo.lat, posInfo.lon);
+  posfile.close();
+  lastPI = posInfo;
 }
 
 String ConnSDCard::getStatus() {

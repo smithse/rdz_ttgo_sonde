@@ -63,6 +63,9 @@ Conn *connectors[] = { &connSystem,
 #if FEATURE_SONDEHUB
 &connSondehub,
 #endif
+#if FEATURE_CHASEMAPPER
+&connChasemapper,
+#endif
 #if FEATURE_SDCARD
 &connSDCard,
 #endif
@@ -2167,11 +2170,8 @@ void loopDecoder() {
 #if FEATURE_APRS
       connAPRS.updateSonde(s);
 #endif
-
 #if FEATURE_CHASEMAPPER
-      if (sonde.config.cm.active) {
-        connChasemapper.updateSonde( s );
-      }
+      connChasemapper.updateSonde( s );
 #endif
     }
 #if FEATURE_SONDEHUB
@@ -2184,7 +2184,9 @@ void loopDecoder() {
 #if FEATURE_MQTT
     connMQTT.updateSonde( s );      // send to MQTT if enabled
 #endif
-
+#if FEATURE_SDCARD
+    connSDCard.updateSonde(s);
+#endif
   } else {
 #if FEATURE_SONDEHUB
     connSondehub.updateSonde( NULL );
@@ -2198,6 +2200,9 @@ void loopDecoder() {
 #endif
 #if FEATURE_APRS
   connAPRS.updateStation( NULL );
+#endif
+#if FEATURE_SDCARD
+  connSDCard.updateStation( NULL );
 #endif
   // always send data, even if not valid....
   if (rdzclient.connected()) {
@@ -2315,7 +2320,7 @@ void startSpectrumDisplay() {
   enterMode(ST_SPECTRUM);
 }
 
-String translateEncryptionType(wifi_auth_mode_t encryptionType) {
+const char *translateEncryptionType(wifi_auth_mode_t encryptionType) {
   switch (encryptionType) {
     case (WIFI_AUTH_OPEN):
       return "Open";
@@ -2685,8 +2690,8 @@ void loopWifiScan() {
       disp.rdis->drawString(0, dispys * (1 + line), ssid.c_str());
       line = (line + 1) % (disph / dispys);
       String mac = WiFi.BSSIDstr(i);
-      String encryptionTypeDescription = translateEncryptionType(WiFi.encryptionType(i));
-      Serial.printf("Network %s: RSSI %d, MAC %s, enc: %s\n", ssid.c_str(), WiFi.RSSI(i), mac.c_str(), encryptionTypeDescription.c_str());
+      const char *encryptionTypeDescription = translateEncryptionType(WiFi.encryptionType(i));
+      Serial.printf("Network %s: RSSI %d, MAC %s, enc: %s\n", ssid.c_str(), WiFi.RSSI(i), mac.c_str(), encryptionTypeDescription);
       int curidx = fetchWifiIndex(ssid.c_str());
       if (curidx >= 0 && index == -1) {
         index = curidx;

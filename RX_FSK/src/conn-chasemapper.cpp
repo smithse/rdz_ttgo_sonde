@@ -17,6 +17,9 @@ void ConnChasemapper::netsetup() {
 void ConnChasemapper::updateSonde(SondeInfo *si) {
 	char buf[1024];
 	struct tm tim;
+
+        if(!sonde.config.cm.active) return;
+
 	time_t t = si->d.time;
 	gmtime_r(&t, &tim);
 	uint8_t realtype = si->type;
@@ -65,7 +68,10 @@ void ConnChasemapper::updateStation(PosInfo *pi) {
 }
 
 String ConnChasemapper::getStatus() {
-	return String("");
+        if(!sonde.config.cm.active) return String("disabled");
+        char info[100];
+	snprintf(info, 100, "active [%s:%d]", sonde.config.cm.host, sonde.config.cm.port);
+	return String(info);
 }
 
 String ConnChasemapper::getName() {

@@ -318,12 +318,12 @@ error:
 
 const char *aprsstate2str(int state) {
   switch(state) {
-  case TCS_DISCONNECTED: return "Disconnected";
+  case TCS_DISCONNECTED: return "disconnected";
   case TCS_DNSLOOKUP: return "DNS lookup";
   case TCS_DNSRESOLVED: return "DNS resolved";
-  case TCS_CONNECTING: return "Connecting";
-  case TCS_LOGIN: return "Login";
-  case TCS_CONNECTED: return "Connected";
+  case TCS_CONNECTING: return "connecting";
+  case TCS_LOGIN: return "login";
+  case TCS_CONNECTED: return "connected";
   default: return "??";
   }
 }
@@ -338,7 +338,7 @@ String ConnAPRS::getStatus() {
     else strlcat(buf, "KISS TNC: server active, idle<br>", 1024 );
     // APRS client
     if(sonde.config.tcpfeed.active==0) strlcat(buf, "APRS: disabled", 1024);
-    else snprintf( buf+strlen(buf), 1024-strlen(buf), "APRS: %s: %s", sonde.config.tcpfeed.host, aprsstate2str(tcpclient_state));
+    else snprintf( buf+strlen(buf), 1024-strlen(buf), "APRS: %s [%s]", aprsstate2str(tcpclient_state), sonde.config.tcpfeed.host);
     return String(buf);
 }
 

@@ -1,7 +1,8 @@
-
+#include "../features.h"
 #include "conn-system.h"
 
 #include <WiFi.h>
+#include "geteph.h"
 
 extern uint32_t netup_time;
 
@@ -45,9 +46,14 @@ String ConnSystem::getStatus() {
   uint16_t nup_s = nuptime - 60 * nup_m;
 
   char buf[1024];
-  snprintf(buf, 1024, "Uptime: %0dd %02d:%02d:%02d, WiFi uptime: %0dd %02d:%02d:%02d <br> rdzwxGO app: %sconnected",
+#if FEATURE_RS92
+  const char *rs92 = ephtxt[ephstate];
+#else
+  const char *rs92 = "not supported in this version";
+#endif
+  snprintf(buf, 1024, "Uptime: %0dd %02d:%02d:%02d, WiFi uptime: %0dd %02d:%02d:%02d <br> rdzwxGO app: %sconnected<br>RS92 RINEX eph state: %s",
     up_d, up_h, up_m, up_s,
-    nup_d, nup_h, nup_m, nup_s, rdzclient.connected()?"":"not ");
+    nup_d, nup_h, nup_m, nup_s, rdzclient.connected()?"":"not ", rs92);
   return String(buf);
 }
 
