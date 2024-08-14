@@ -11,6 +11,7 @@ struct StationPos gpsPos;
 // Station position to use (from GPS or fixed)
 struct StationPos posInfo;
 
+static int gotNMEA = 0;
 
 /* SH_LOC_OFF: never send position information to SondeHub
    SH_LOC_FIXED: send fixed position (if specified in config) to sondehub
@@ -100,9 +101,11 @@ void gpsTask(void *parameter) {
 
   while (1) {
     while (Serial2.available()) {
+      if(gotNMEA == 0) gotNMEA = -1; // at least we got *something* 
       char c = Serial2.read();
       //Serial.print(c);
       if (nmea.process(c)) {
+        gotNMEA = 1;
         gpsPos.valid = nmea.isValid();
         if (gpsPos.valid) {
           gpsPos.lon = nmea.getLongitude() * 0.000001;
@@ -278,3 +281,33 @@ void parseGpsJson(char *data, int len) {
   if (gpsPos.lat == 0 && gpsPos.lon == 0) gpsPos.valid = false;
   Serial.printf("Parse result: lat=%f, lon=%f, alt=%d, valid=%d\n", gpsPos.lat, gpsPos.lon, gpsPos.alt, gpsPos.valid);
 }
+
+
+
+// We implement the interface for showing the status only, the other functions remain empty...
+void ConnGPS::init() { }
+void ConnGPS::netsetup() { }
+void ConnGPS::updateSonde( SondeInfo *si ) { }
+void ConnGPS::updateStation( PosInfo *pi ) { }
+
+String ConnGPS::getName() {
+  return String("GPS");
+}
+
+String ConnGPS::getStatus() {
+    char status[256];
+
+    strlcpy(status, "On-board GPS: ", 256);
+    if(sonde.config.gps_rxd==-1) strlcat(status, "disabled<br>", 256);
+    else if(gotNMEA==0) strlcat(status, "no data<br>", 256);
+    else if(gotNMEA<0) strlcat(status, "no NMEA data<br>", 256);
+    else strlcat(status, "ok<br>", 256);
+    int pos = strlen(status);
+    snprintf(status + pos, 256-pos, "GPS: valid=%d lat=%.6f lon=%.6f alt=%d<br>", gpsPos.valid, gpsPos.lat, gpsPos.lon, gpsPos.alt);
+    pos = strlen(status);
+    snprintf(status + pos, 256-pos, "Using station position: valid=%d lat=%.6f lon=%.6f<br>", posInfo.valid, posInfo.lat, posInfo.lon);
+    return String(status);
+}
+
+
+ConnGPS connGPS;

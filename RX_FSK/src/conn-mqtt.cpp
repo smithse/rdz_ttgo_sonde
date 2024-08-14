@@ -142,7 +142,9 @@ void MQTT::publishPacket(SondeInfo *si)
 }
 
 String MQTT::getStatus() {
-    return String("");
+    if(!sonde.config.mqtt.active) return String("disabled");
+    if(mqttClient.connected()) return String("connected");
+    else return String("not connected");
 }
 
 String MQTT::getName() {

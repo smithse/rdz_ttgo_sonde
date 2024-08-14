@@ -39,9 +39,9 @@ String ConnSystem::getStatus() {
 
   uint32_t nuptime = uptime - netup_time;
   uint16_t nup_d = nuptime / (24*3600);
-  netup_time -= (24*3600) * nup_d;
+  nuptime -= (24*3600) * nup_d;
   uint16_t nup_h = nuptime / 3600;
-  netup_time -= 3600 * nup_h;
+  nuptime -= 3600 * nup_h;
   uint16_t nup_m = nuptime / 60;
   uint16_t nup_s = nuptime - 60 * nup_m;
 

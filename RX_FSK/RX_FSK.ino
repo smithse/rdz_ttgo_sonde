@@ -57,6 +57,7 @@
 #include "src/conn-system.h"
 
 Conn *connectors[] = { &connSystem,
+&connGPS,
 #if FEATURE_APRS
 &connAPRS,
 #endif
@@ -65,6 +66,9 @@ Conn *connectors[] = { &connSystem,
 #endif
 #if FEATURE_CHASEMAPPER
 &connChasemapper,
+#endif
+#if FEATURE_MQTT
+&connMQTT,
 #endif
 #if FEATURE_SDCARD
 &connSDCard,
@@ -648,13 +652,12 @@ struct st_configitems config_list[] = {
   /* AXUDP settings */
   {"axudp.active", -3, &sonde.config.udpfeed.active},
   {"axudp.host", 63, sonde.config.udpfeed.host},
-  {"axudp.port", 0, &sonde.config.udpfeed.port},
-  {"axudp.highrate", 0, &sonde.config.udpfeed.highrate},
+  {"axudp.ratelimit", 0, &sonde.config.udpfeed.ratelimit},
   /* APRS TCP settings */
   {"tcp.active", -3, &sonde.config.tcpfeed.active},
   {"tcp.timeout", 0, &sonde.config.tcpfeed.timeout},
   {"tcp.host", 63, sonde.config.tcpfeed.host},
-  {"tcp.port", 0, &sonde.config.tcpfeed.port},
+  {"tcp.host2", 63, &sonde.config.tcpfeed.host2},
   {"tcp.chase", 0, &sonde.config.chase},
   {"tcp.comment", 30, sonde.config.comment},
   {"tcp.objcall", 9, sonde.config.objcall},

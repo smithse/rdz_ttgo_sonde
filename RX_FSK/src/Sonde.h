@@ -181,12 +181,16 @@ struct st_mp3hconfig {
 	int rxbw;
 };
 
-
-struct st_feedinfo {
+struct st_axudpinfo {
         bool active;
-        int type;       // 0:UDP(axudp), 1:TCP(aprs.fi)
         char host[64];
-        int port;
+        int ratelimit;
+};
+
+struct st_aprsinfo {
+        bool active;
+        char host[64];
+        char host2[64];
         char symbol[3];
         int lowrate;
         int highrate;
@@ -300,8 +304,8 @@ typedef struct st_rdzconfig {
 	char objcall[10];		// APRS object call (for wettersonde.net)
 	char beaconsym[5];		// APRS beacon symbol
 	char comment[32];
-	struct st_feedinfo udpfeed;	// target for AXUDP messages
-	struct st_feedinfo tcpfeed;	// target for APRS-IS TCP connections
+	struct st_axudpinfo udpfeed;	// target for AXUDP messages
+	struct st_aprsinfo tcpfeed;	// target for APRS-IS TCP connections
 	struct st_kisstnc kisstnc;	// target for KISS TNC (via TCP, mainly for APRSdroid)
 	struct st_mqtt mqtt;
 	struct st_sondehub sondehub;

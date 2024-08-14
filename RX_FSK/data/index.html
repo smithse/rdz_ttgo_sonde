@@ -10,18 +10,58 @@
 <body>
  <div class="wrapper"><div class="header">
 <div class="topnav" id="myTopnav">
-	<a href="#qrg" onclick="selTab(event,'QRG')" class="tablinks" id="defaultTab">QRG</a>
+	<a href="#home" onclick="selTab(event,'Home');fetchStatus()" class="tablinks" id="defaultTab">Home</a>
+	<a href="#qrg" onclick="selTab(event,'QRG')" class="tablinks">QRG</a>
 	<a href="#data" onclick="selTab(event,'Data')" class="tablinks">Data</a>
-	<a href="#map" onclick="selTab(event,'Map')" class="tablinks">Map</a>
-	<a href="#livemap" onclick="document.location.href='livemap.html'" class="tablinks">LiveMap</a>
+	<a href="#livemap" onclick="document.location.href='livemap.html'" class="tablinks">Livemap</a>
 	<a href="#ctrl" onclick="selTab(event,'Control')" class="tablinks">Control</a>
 	<a href="#config" onclick="selTab(event,'Config')" class="tablinks">Config</a>
 	<a href="#wifi" onclick="selTab(event,'WiFi')" class="tablinks">WiFi</a>
-	<a href="#about" onclick="selTab(event,'About');fetchStatus()" class="tablinks">About</a>
 	<a href="javascript:void(0);" class="icon" onclick="myFunction()">
 		<span class="hamburger"></span>
 	</a>
 </div>
+</div>
+
+<div id="Home" class="tabcontent">
+<div class="tci">
+<div class="system-info">
+<h1>%VERSION_NAME% version %VERSION_ID%</h1>
+<p>Copyright &copy; 2019-2024 by Hansi Reiser, DL9RDZ and contributors</p>
+<p>
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the <a href="https://www.gnu.org/licenses/gpl-2.0.txt">GNU General Public License</a> as
+    published by the Free Software Foundation; either version 2 of
+    the License, or (at your option) any later version. 
+    See <a href="https://github.com/dl9rdz/rdz_ttgo_sonde/">https://github.com/dl9rdz/rdz_ttgo_sonde/</a>
+    for details, contributors, and license exceptions of third-party components.
+</p>
+<p><br><a href="/upd.html">Check for update (requires TTGO internet connection via WiFi)</a><br></p>
+<table class="status-table">
+<thead>
+ <tr>
+ <th>Component</th><th>Status<button id="refresh-button" onclick="fetchStatus()">[refresh]</button></th>
+ </tr>
+</thead>
+<tbody id="status-body"> 
+ <tr>
+ <td>TTGO</td>
+ <td>Autodetect info: %AUTODETECT_INFO%</td>
+ </tr>
+</tbody>
+</table>
+</div>
+<div class="external-links">
+<h2>External Sites</h2>
+<div class="link-buttons">
+ <a href="https://www.wettersonde.net" target="_blank" class="button">wettersonde.net</a>
+ <a href="https://www.radiosondy.info" target="_blank" class="button">radiosondy.info</a>
+ <a href="https://www.sondehub.org" target="_blank" class="button">sondehub.org</a>
+</div>
+</div>
+</div>
+<div class="footer"><span></span><span class="ttgoinfo">rdzTTGOserver %VERSION_ID%</span></div>
+
 </div>
 
 <div id="QRG" class="tabcontent" data-src="qrg.html">
@@ -36,10 +76,6 @@
 	<iframe class="tci" src="" ></iframe>
 </div>
 
-<div id="Map" class="tabcontent" data-src="map.html">
-	<iframe class="tci" src="" ></iframe>
-</div>
-
 <div id="Config" class="tabcontent" data-src="config.html">
 	<iframe class="tci" src="" ></iframe>
 </div>
@@ -48,35 +84,6 @@
 	<iframe class="tci" src="" ></iframe>
 </div>
 
-<div id="About" class="tabcontent">
-<div class="tci">
-<div class="system-info">
-<h1>%VERSION_NAME% version %VERSION_ID%</h1>
-<p>Autodetect info: %AUTODETECT_INFO%</p>
-<p>Copyright &copy; 2019-2024 by Hansi Reiser, DL9RDZ and contributors</p>
-<p>
-    This program is free software; you can redistribute it and/or
-    modify it under the terms of the <a href="https://www.gnu.org/licenses/gpl-2.0.txt">GNU General Public License</a> as
-    published by the Free Software Foundation; either version 2 of
-    the License, or (at your option) any later version. 
-    See <a href="https://github.com/dl9rdz/rdz_ttgo_sonde/">https://github.com/dl9rdz/rdz_ttgo_sonde/</a>
-    for details, contributors, and license exceptions of third-party components.
-</p>
-<p><a href="/upd.html">Check for update (requires TTGO internet connection via WiFi)</a></p>
-<table class="status-table">
-<thead>
- <tr>
- <th>Component</th><th>Status<button id="refresh-button" onclick="fetchStatus()">[refresh]</button></th>
- </tr>
-</thead>
-<tbody id="status-body">
-</tbody>
-</table>
-</div>
-</div>
-<div class="footer"><span></span><span class="ttgoinfo">rdzTTGOserver %VERSION_ID%</span></div>
-
-</div>
 <script>
 function fetchStatus() {
   fetch('/status.json')
