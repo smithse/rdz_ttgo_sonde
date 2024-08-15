@@ -26,6 +26,7 @@ struct st_aprs {
     int port;
     unsigned long last_in;
     uint8_t tcpclient_state;
+    uint32_t conn_ts;
 } aprs[2]={0}; 
 enum { TCS_DISCONNECTED, TCS_DNSLOOKUP, TCS_DNSRESOLVED, TCS_CONNECTING, TCS_LOGIN, TCS_CONNECTED };
 
@@ -212,6 +213,7 @@ static void _tcp_dns_found(const char * name, const ip_addr_t *ipaddr, void * ar
 
 void tcpclient_sendlogin(st_aprs *a) {
     char buf[128];
+    a->conn_ts = esp_timer_get_time() / 1000000;
     snprintf(buf, 128, "user %s pass %d vers %s %s\r\n", sonde.config.call, sonde.config.passcode, version_name, version_id);
     int res = write(a->tcpclient, buf, strlen(buf));
     Serial.printf("APRS login: %s, res=%d\n", buf, res);
@@ -390,8 +392,18 @@ String ConnAPRS::getStatus() {
     // APRS client
     if(sonde.config.tcpfeed.active==0) strlcat(buf, "APRS: disabled", 1024);
     else {
-        snprintf( buf+strlen(buf), 1024-strlen(buf), "APRS: %s [%s]<br>", aprsstate2str(aprs[0].tcpclient_state), sonde.config.tcpfeed.host);
-        snprintf( buf+strlen(buf), 1024-strlen(buf), "APRS2: %s [%s]", aprsstate2str(aprs[1].tcpclient_state), sonde.config.tcpfeed.host2);
+        snprintf( buf+strlen(buf), 1024-strlen(buf), "APRS: %s [%s]", aprsstate2str(aprs[0].tcpclient_state), sonde.config.tcpfeed.host);
+        uint32_t uptime = esp_timer_get_time() / 1000000;
+        Serial.printf("up %d c1 %d c2%d\n", uptime, aprs[0].conn_ts, aprs[1].conn_ts);
+        if(aprs[0].tcpclient_state == TCS_CONNECTED) {
+            strlcat(buf, ", up: ", 1024);
+            appendUptime(buf, 1024, uptime - aprs[0].conn_ts);
+        }
+        snprintf( buf+strlen(buf), 1024-strlen(buf), "<br>APRS2: %s [%s]", aprsstate2str(aprs[1].tcpclient_state), sonde.config.tcpfeed.host2);
+        if(aprs[1].tcpclient_state == TCS_CONNECTED) {
+            strlcat(buf, ", up: ", 1024);
+            appendUptime(buf, 1024, uptime - aprs[1].conn_ts);
+        }
     }
     return String(buf);
 }

@@ -39,5 +39,9 @@ public:
 
         /* Called to retrieve the name of this connector (for status display) */
 	virtual String getName();
+
+	static void appendUptime(char *str, int maxlen, uint32_t uptime);
+	static void escapeJson(char *dst, const char *src, int maxlen);
+
 };
 #endif

@@ -19,6 +19,8 @@ uint8_t ephstate = EPH_NOTUSED;
 //enum EPHSTATE { EPH_NOTUSED, EPH_PENDING, EPH_TIMEERR, EPH_ERROR, EPH_EPHERROR, EPH_GOOD };
 const char *ephtxt[] = { "Disabled (no RS92 in QRG list or Wifi mode not 3)", "Pending", "Time error", "Fetch error", "Read error", "Good" };
 
+char eph_nowstr[12];
+
 uint8_t getreply() {
 	String s = client.readStringUntil('\n');
 	Serial.println(s);
@@ -65,20 +67,19 @@ void geteph() {
 	int year = tinfo.tm_year + 1900;
 	int day = tinfo.tm_yday + 1;
 	Serial.printf("year %d, day %d\n", year, day);
-	char nowstr[20];
-	snprintf(nowstr, 20, "%04d%03d%02d", year, day, tinfo.tm_hour);
+	snprintf(eph_nowstr, 12, "%04d%03d%02d", year, day, tinfo.tm_hour);
 	File status = LittleFS.open("/brdc.time", "r");
 	if(status) {
 		String ts = status.readStringUntil('\n');
 		const char *tsstr = ts.c_str();
 		if(tsstr && strlen(tsstr)>=9) {
-			if(strcmp(nowstr, ts.c_str())<=0) {
+			if(strcmp(eph_nowstr, ts.c_str())<=0) {
 				Serial.println("local brdc is up to date\n");
 				ephstate = EPH_GOOD;
 				return;
 			}
 		}
-		Serial.printf("now: %s, existing: %s => updating\n", nowstr, tsstr);
+		Serial.printf("now: %s, existing: %s => updating\n", eph_nowstr, tsstr);
 	}
 	status.close();
 	File fh = LittleFS.open("/brdc.gz","w");
@@ -228,7 +229,7 @@ void geteph() {
 	// maybe todo: check crc?!?
 	Serial.printf("done extracing content (total length: %d)\n", total);
 	status = LittleFS.open("/brdc.time","w");
-	status.println(nowstr);
+	status.println(eph_nowstr);
 	status.close();
         snprintf(buf, 16, "Done: %d B    ",total);
         buf[16]=0;

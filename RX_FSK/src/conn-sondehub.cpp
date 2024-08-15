@@ -584,46 +584,6 @@ static const char *state2str(SHState state) {
   }
 }
 
-
-#if 0
-String escape_json(const String &s) {
-    // bad idea. This adds 200k of code size :-(
-    std::ostringstream o;
-    for(const char *c = s.c_str(); *c!=0; c++) {
-        if (*c == '"' || *c == '\\' || ('\x00' <= *c && *c <= '\x1f')) {
-            o << "\\u"
-              << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(*c);
-        } else {
-            o << *c;
-        }
-    }
-    return String(o.str().c_str());
-    return String("");
-}
-#endif
-
-// take first line (until \r), skip until \r\r, 
-void escape_json(char *dst, const char *src, int maxlen) {
-    int state = 0;
-    while (*src && maxlen>1) {
-        if(state==0) { if(*src=='\r') { state=1; src++; *dst++=' '; maxlen--; continue; } }  // take first line
-        if(state==1) { if(*src=='\r') { state=2; } src++; continue; }
-        if(state==2) { if(*src!='\r' && *src!='\n') { state=1; } if(*src=='\r') { state=3; } src++; continue; }
-    
-        if (*src == '"' || *src == '\\' || ('\x00' <= *src && *src <= '\x1f')) {
-            snprintf(dst, maxlen, "\\u%04d", (int)*src);
-            int n = strlen(dst);
-            maxlen -= n;
-            dst += n;
-	    src++;
-        } else {
-            *dst++ = *src++; maxlen--;
-        }
-    }
-    *dst = 0;
-}
-
-
 String ConnSondehub::getStatus() {
   char info[1200];
   time_t now;
@@ -634,7 +594,7 @@ String ConnSondehub::getStatus() {
   if(response)  {
      strlcat(info, "<br>Response: ", 1200);
      int n = strlen(info);
-     escape_json(info+n, response.c_str(), 1200-n);
+     escapeJson(info+n, response.c_str(), 1200-n);
   }
   return String(info);
 }
