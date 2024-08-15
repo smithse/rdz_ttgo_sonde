@@ -48,7 +48,10 @@ void ConnAPRS::init() {
     if(colon) {
         *colon = 0;
         udpport = atoi(colon+1);
+    } else {
+        udpport = 9002;
     }
+    Serial.printf("AXUDP: host=%s, port=%d\n", udphost, udpport);
 }
 
 void ConnAPRS::netsetup() {
@@ -68,6 +71,7 @@ void ConnAPRS::updateSonde( SondeInfo *si ) {
     // prepare data (for UDP and TCP output)
     char *str = aprs_senddata(si, sonde.config.call, sonde.config.objcall, sonde.config.tcpfeed.symbol);
 
+    Serial.printf("udpfedd active: %d  tcpfeed active: %d\n", sonde.config.udpfeed.active, sonde.config.tcpfeed.active);
     // Output via AXUDP
     if(sonde.config.udpfeed.active) {
         char raw[201];

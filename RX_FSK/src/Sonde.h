@@ -182,13 +182,13 @@ struct st_mp3hconfig {
 };
 
 struct st_axudpinfo {
-        bool active;
+        int active;
         char host[64];
         int ratelimit;
 };
 
 struct st_aprsinfo {
-        bool active;
+        int active;
         char host[64];
         char host2[64];
         char symbol[3];

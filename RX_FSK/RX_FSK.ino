@@ -755,6 +755,7 @@ const char *createConfigForm() {
       case -2:
       case 0:
         sprintf(ptr + strlen(ptr), "%d", *(int *)config_list[i].data);
+        Serial.printf("Config for %s is %d\n", config_list[i].name, *(int *)config_list[i].data);
         break;
       case -6: // list
         {

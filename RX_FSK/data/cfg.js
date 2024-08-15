@@ -39,7 +39,7 @@ var cfgs = [
 [ "kisstnc.active", "KISS TNC (port 14590) (needs reboot)"],
 [ "axudp.active", "AXUDP active"],
 [ "axudp.host", "AXUDP host[:port]"],
-[ "axudp.highrate", "Rate limit"],
+[ "axudp.ratelimit", "Rate limit"],
 [ "tcp.active", "APRS TCP active"],
 [ "tcp.timeout", "APRS TCP timeout [s] (0=off, 25=on)"],
 [ "tcp.host", "APRS TCP host[:port] (default port 14580)"],
