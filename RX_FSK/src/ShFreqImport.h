@@ -10,11 +10,11 @@ class ShFreqImport {
 public:
 	// Fetch data from sondehub and populate qrg.txt with result
 	// return: 0: ok; 1: failure
-	static int shImportSendRequest(WiFiClient *client, float lat, float lon, int dist, int time);
+	static int shImportSendRequest(int client, float lat, float lon, int dist, int time);
 
 	// return 0: ok, need more data; 1: finished/failure, close connection
 	// Asynchronous I/O. Handle data if available
-	static int shImportHandleReply(WiFiClient *client);  
+	static int shImportHandleReply(int client);  
 
 private:
 	static int stringToStype(const char *type);

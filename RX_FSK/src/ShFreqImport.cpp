@@ -212,13 +212,16 @@ int ShFreqImport::handleChar(char c) {
 }
 
 // lat lon in deg, dist in km, time in minutes
-int ShFreqImport::shImportSendRequest(WiFiClient *client, float lat, float lon, int dist, int time) {
+int ShFreqImport::shImportSendRequest(int client, float lat, float lon, int dist, int time) {
+#if 0
+// caller should call only if connected..
 	if(!client->connected()) {
 		if(!client->connect(sonde.config.sondehub.host, 80)) {
 			Serial.println("Connection FAILED");
 			return 1;
 		}
 	}
+#endif
 	Serial.println("Sending SondeHub import request");
 	char req[300];
 	snprintf(req, 200, "GET /sondes?lat=%f&lon=%f&distance=%d&last=%d HTTP/1.1\r\n"
@@ -226,7 +229,7 @@ int ShFreqImport::shImportSendRequest(WiFiClient *client, float lat, float lon, 
 		"Accept: application/json\r\n"
 		"Cache-Control: no-cache\r\n\r\n",
 		lat, lon, dist*1000, time*60, sonde.config.sondehub.host);
-	client->print(req);
+	dprintf(client, req);
 	Serial.print(req);
 	importState = START;
 	homelat = lat;
@@ -237,11 +240,15 @@ int ShFreqImport::shImportSendRequest(WiFiClient *client, float lat, float lon, 
 }
 
 // return 0 if more data should be read (later), 1 if finished (close connection...)
-int ShFreqImport::shImportHandleReply(WiFiClient *client) {
+int ShFreqImport::shImportHandleReply(int client) {
+#if 0
+// TODO::::
+
 	if(!client->connected()) return 1;
 	while(client->available()) {
 		int res = handleChar(client->read());
 		if(res) return res;
 	}
+#endif
 	return 0;
 }

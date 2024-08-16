@@ -27,6 +27,7 @@ public:
         String getName();
 
 private:
+        void sondehub_client_fsm();
 	void sondehub_station_update();
 	void sondehub_reply_handler();
 	void sondehub_send_fimport();
