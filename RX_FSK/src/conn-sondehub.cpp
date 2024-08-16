@@ -646,6 +646,7 @@ void ConnSondehub::sondehub_send_data(SondeInfo * s) {
   if (now - shStart > SONDEHUB_MAXAGE) { // after MAXAGE seconds
     sondehub_send_last();
     shclient_state = SH_CONN_WAITACK;
+    rs_msg_len = 0;   // wait for new msg: 
     shStart = 0;
   }
 }
@@ -658,6 +659,7 @@ void ConnSondehub::sondehub_finish_data() {
     if (now - shStart > SONDEHUB_MAXAGE + 3) { // after MAXAGE seconds
       sondehub_send_last();
       shclient_state = SH_CONN_WAITACK;
+    rs_msg_len = 0;   // wait for new msg: 
       shStart = 0;
     }
   }
