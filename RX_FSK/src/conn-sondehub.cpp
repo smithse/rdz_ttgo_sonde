@@ -217,14 +217,18 @@ void ConnSondehub::sondehub_client_fsm() {
         } else {
             // Copy to reponse
             for(int i=0; i<res; i++) {
-               rs_msg[rs_msg_len] = buf[i];
-               rs_msg_len++;
-               if(buf[i]=='\n' && shclient_state == SH_CONN_WAITACK) {
-                   // We still wait for the beginning of the ACK
-		   // so check if we got that. if yes, all good, continue readning :)
-                   // If not, ignore everything we have read so far...
-                   if(strncmp(rs_msg, "HTTP/1", 6)==0) { shclient_state = SH_CONN_IDLE; }
-                   else rs_msg_len = 0;
+               if(rs_msg_len<MSG_SIZE-1) {
+                   rs_msg[rs_msg_len] = buf[i];
+                   rs_msg_len++;
+               }
+               if(shclient_state == SH_CONN_WAITACK) {
+                   if(buf[i]=='\n') {
+                       // We still wait for the beginning of the ACK
+		       // so check if we got that. if yes, all good, continue reading :)
+                       // If not, ignore everything we have read so far...
+                       if(strncmp(rs_msg, "HTTP/1", 6)==0) { shclient_state = SH_CONN_IDLE; }
+                       else rs_msg_len = 0;
+                   }
                 }
             }
             rs_msg[rs_msg_len] = 0;
@@ -233,6 +237,7 @@ void ConnSondehub::sondehub_client_fsm() {
             Serial.write( (uint8_t *)buf, res );
 	    // TODO: Maybe timestamp last received data?
             // TODO: Maybe repeat
+            // TODO: Add timeout to WAITACK...
         }
     }
     break;
@@ -361,6 +366,7 @@ void ConnSondehub::sondehub_station_update() {
   Serial.println("Waiting for response");
   // Now we do this asychronously
   shclient_state = SH_CONN_WAITACK;
+  rs_msg_len = 0;   // wait for new msg: 
 
   sondehub_client_fsm();
 }
