@@ -120,6 +120,9 @@ void Sonde::defaultConfig() {
 	config.norx_timeout = 20;
 	config.screenfile = 1;
 	config.tft_spifreq = SPI_DEFAULT_FREQ;
+	// TFT RS and CS not used for LCD, if TFT detected this will be changed below
+	config.tft_rs = -1;
+	config.tft_cs = -1;
 	if(initlevels[16]==0) {
 		config.oled_sda = 4;
 		config.oled_scl = 15;

@@ -312,11 +312,16 @@ void setupChannelList() {
 }
 
 const char *HTMLHEAD = "<!DOCTYPE html><html><head> <meta charset=\"UTF-8\"> <link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\">";
-void HTMLBODY(char *ptr, const char *which) {
+void HTMLBODY_OS(char *ptr, const char *which, const char *onsubmit) {
   strcat(ptr, "<body><form class=\"wrapper\" action=\"");
   strcat(ptr, which);
+  if(onsubmit) {
+     strcat(ptr, "\" onsubmit=\"");
+     strcat(ptr, onsubmit);
+  }
   strcat(ptr, "\" method=\"post\"><div class=\"content\">");
 }
+void HTMLBODY(char *ptr, const char *which) { HTMLBODY_OS(ptr, which, NULL); }
 void HTMLBODYEND(char *ptr) {
   strcat(ptr, "</div></form></body></html>");
 }
@@ -737,7 +742,7 @@ const char *createConfigForm() {
   char *ptr = message;
   strcpy(ptr, HTMLHEAD);
   strcat(ptr, "<script src=\"rdz.js\"></script></head>");
-  HTMLBODY(ptr, "config.html");
+  HTMLBODY_OS(ptr, "config.html", "return checkForDuplicates()");
   strcat(ptr, "<div id=\"cfgtab\"></div>");
   strcat(ptr, "<script src=\"cfg.js\"></script>");
   strcat(ptr, "<script>\n");

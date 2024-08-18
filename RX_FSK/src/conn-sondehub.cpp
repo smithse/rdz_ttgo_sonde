@@ -78,6 +78,8 @@ void ConnSondehub::netsetup() {
 //   each second, if good decode: sondehub_send_data
 //   each second, if no good decode: sondehub_finish_data
 void ConnSondehub::updateSonde( SondeInfo *si ) {
+    if (!sonde.config.sondehub.active)
+        return;
     Serial.println("SH: updateSonde called");
     sondehub_client_fsm();
 
@@ -91,6 +93,8 @@ void ConnSondehub::updateSonde( SondeInfo *si ) {
 
 
 void ConnSondehub::updateStation( PosInfo *pi ) {
+    if (!sonde.config.sondehub.active)
+        return;
     Serial.println("SH: updateStation called");
     sondehub_client_fsm();
     // Currently, internal reply_handler uses gpsInfo global variable instead of this pi
@@ -714,13 +718,16 @@ void ConnSondehub::sondehub_send_last() {
 String ConnSondehub::getStatus() {
   char info[1200];
   time_t now;
+  if(sonde.config.sondehub.active==0) {
+    strcpy(info, "disabled");
+  } else {
   time(&now);
   if(shStart==0) now=-1;
   snprintf(info, 1200, "State: %s. Last upload start: %ld s ago<br>Last reply: ",
       state2str(shclient_state), (uint32_t)(now-shStart));
   int n = strlen(info);
   escapeJson(info+n, rs_msg, 1200-n);
-
+  }
   return String(info);
 }
 

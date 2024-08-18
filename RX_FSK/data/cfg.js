@@ -95,13 +95,79 @@ var cfgs = [
 [ "power_pout", "Power control port"],
 [ "led_pout", "LED output port"],
 [ "gps_rxd", "GPS RXD pin (-1 to disable)"],
-[ "gps_txd", "GPS TXD pin (not really needed)"],
+[ "gps_txd", "GPS TXD pin (optional, only for GSP reset)"],
 [ "batt_adc", "Battery measurement pin"],
 [ "sx1278_ss", "SX1278 SS"],
 [ "sx1278_miso", "SX1278 MISO"],
 [ "sx1278_mosi", "SX1278 MOSI"],
 [ "sx1278_sck", "SX1278 SCK"],
 ];
+
+var tocheck = ["sd.cs", "sd.miso", "sd.mosi", "sd.clk", "oled_sda", "oled_scl", "oled_rst", "tft_rs", "tft_cs", "tft_spifreq", "button_pin", "button2_pin", 
+  "led_pout", "gps_rxd", "gps_txd", "batt_adc", "sx1278_ss", "sx1278_miso", "sx1278_mosi", "sx1278_sck"];
+var alloweddups = [ ["sd.mosi", "oled_sda"], ["sd.clk", "oled_scl" ] ];
+
+function isAllowedDup(nameA, nameB) {
+   for (var i = 0; i < alloweddups.length; i++) {
+       var pair = alloweddups[i];
+       if ((pair[0] === nameA && pair[1] === nameB) || (pair[0] === nameB && pair[1] === nameA)) {
+           return true;
+       }
+   }
+   return false;
+}
+// Function to check for duplicate pins
+function checkForDuplicates() {
+    // Create an object to store values and their associated descriptions and names
+    var valuesMap = {};
+    var duplicates = [];
+
+    // Iterate through the tocheck array
+    for (var i = 0; i < tocheck.length; i++) {
+        var inputName = tocheck[i];
+        var inputValue = parseInt(document.getElementsByName(inputName)[0].value, 10);
+
+        // Skip empty values or values that are -1
+        if (isNaN(inputValue) || inputValue === -1) {
+            continue;
+        }
+
+        var cfg = cfgs.find(item => item[0] === inputName);
+        var descriptionB = cfg ? cfg[1] : "";
+
+        // Check if the value is already in the map
+        if (valuesMap[inputValue]) {
+            var existingEntry = valuesMap[inputValue];
+            var nameA = existingEntry.name;
+            var descriptionA = existingEntry.description;
+
+            // Check if the duplicate is allowed
+            if (!isAllowedDup(nameA, inputName)) {
+                duplicates.push({ value: inputValue, descA: descriptionA, descB: descriptionB });
+            }
+        } else {
+            // Otherwise, store the value with its description and name
+            valuesMap[inputValue] = { name: inputName, description: descriptionB };
+        }
+    }
+
+    // If duplicates were found, show the warning popup
+    if (duplicates.length > 0) {
+        var message = "Duplicated PIN assignments found:\n";
+        for (var j = 0; j < duplicates.length; j++) {
+            message += "Pin " + duplicates[j].value + " in '" + duplicates[j].descA + "' and '" + duplicates[j].descB + "'\n";
+        }
+
+        // Show a confirm popup to let the user decide whether to submit the form
+        if (!confirm(message + "\nDo you want to submit the form anyway?")) {
+            // If the user chooses to cancel, prevent the form submission
+            return false;
+        }
+    }
+
+    // Allow form submission
+    return true;
+}
 
 function mkcfg(id, key, label, value) {
  var s = "<tr style=\"visibility: collapse;\" class=\"cfgpanel\"><td>" + label + "</td><td><input name=\"" + key + "\" type=\"text\" value=\"" + value + "\"/></td></tr>\n";

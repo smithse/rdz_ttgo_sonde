@@ -100,15 +100,15 @@ ephftp=gssc.esa.int/gnss/data/daily/
 axudp.active=1
 axudp.host=192.168.42.20
 axudp.port=9002
-axudp.symbol=/O
-axudp.highrate=1
+axudp.ratelimit=1
 #-------------------------------#
 # connect to some aprs server
 #-------------------------------#
 tcp.active=0
-tcp.host=radiosondy.info
-tcp.port=14590
-tcp.symbol=/O
+tcp.host=radiosondy.info:14590
+#tcp.host2=wettersonde.net:14590
+# Currently this is fixed...
+# tcp.symbol=/O
 tcp.highrate=20
 # send beacon (possibly with different call or SSID)
 tcp.chase=0
@@ -121,7 +121,7 @@ tcp.comment=
 # data not sanitized / quality checked, outliers not filtered out
 mqtt.active=0
 mqtt.id=rdz_sonde_server
-mqtt.ip=192.168.1.5
+mqtt.host=192.168.1.5
 mqtt.port=1883
 mqtt.username=
 mqtt.password=
@@ -139,10 +139,10 @@ sondehub.email=
 #-------------------------------#
 # Sondehub freq import settings
 #-------------------------------#
-shfimp.active=0
-shfimp.interval=60
-shfimp.maxdist=150
-shfimp.maxage=6
+sondehub.fiactive=0
+sondehub.fiinterval=60
+sondehub.fimaxdist=150
+sondehub.fimaxage=6
 #-------------------------------#
 # EOF
 #-------------------------------#

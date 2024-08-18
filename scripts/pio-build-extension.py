@@ -41,3 +41,10 @@ env.AddPostAction("$PROGPATH",
     "xtensa-esp32-elf-ld", "-T", "fontlink.ld", "--oformat=binary", "-o", "$BUILD_DIR/fonts.bin", "$BUILD_DIR/src/src/fonts/fonts.cpp.o" ]),
     "Building $BUILD_DIR/fonts.bin"))
 
+
+
+env.AddCustomTarget(
+  "uploadfonts",
+  "$BUILD_DIR/${PROGNAME}.bin",
+  "scripts/uploadfonts.py $BUILD_DIR/fonts.bin $PARTITIONS_TABLE_CSV"
+)

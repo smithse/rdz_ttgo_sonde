@@ -50,6 +50,7 @@ static MicroNMEA nmea(buffer, sizeof(buffer));
 template<typename T>
 //void unkHandler(const MicroNMEA& nmea) {
 void unkHandler(T nmea) {
+  //Serial.println(nmea.getSentence());
   if (strcmp(nmea.getMessageID(), "VTG") == 0) {
     const char *s = nmea.getSentence();
     while (*s && *s != ',') s++;
@@ -216,7 +217,7 @@ void initGPS() {
       delay(1000);
       dumpGPS();
       LittleFS.remove("/GPSRESET");
-    } else if (testfile) {
+    } else {
       Serial.println("GPS reset file: not found/isdir");
       testfile.close();
       Serial2.begin(9600, SERIAL_8N1, sonde.config.gps_rxd, sonde.config.gps_txd);

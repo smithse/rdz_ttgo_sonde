@@ -142,7 +142,7 @@ void ConnSDCard::updateStation( PosInfo *pi ) {
 }
 
 String ConnSDCard::getStatus() {
-  if(sonde.config.sd.cs == -1) { return String("Disabled"); }
+  if(sonde.config.sd.cs == -1) { return String("disabled"); }
   if(!initok) { return String("SD card init failed"); }
 
   uint8_t cardType = SD.cardType();
