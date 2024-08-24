@@ -2046,7 +2046,7 @@ void setup()
 #else
 /// DEBUG ONLY
   WiFi.begin("Dinosauro", "03071975");
-  while(!WiFi.isConnected()) { delay(500); Serial.print(":"); }
+  while(WiFi.status() != WL_CONNECTED) { delay(500); Serial.print(":"); }
   Serial.println("... WiFi is connected!\n");
   SetupAsyncServer();
   sonde.config.sd.cs = 13;
@@ -2573,10 +2573,12 @@ void loopWifiBackground() {
     wifi_cto = 0;
   } else if (wifi_state == WIFI_CONNECT) {
     wifi_cto++;
-    if (WiFi.isConnected()) {
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("Wifi is connected\n");
       wifi_state = WIFI_CONNECTED;
       // update IP in display
       String localIPstr = WiFi.localIP().toString();
+      Serial.printf("IP is %s\n", localIPstr.c_str());
       sonde.setIP(localIPstr.c_str(), false);
       sonde.updateDisplayIP();
       enableNetwork(true);
@@ -2587,7 +2589,7 @@ void loopWifiBackground() {
     }
   } else if (wifi_state == WIFI_CONNECTED) {
     //Serial.printf("status: %d\n", ((WiFiSTAClass)WiFi).status());
-    if (!WiFi.isConnected()) {
+    if (WiFi.status() != WL_CONNECTED) {
       sonde.setIP("", false);
       sonde.updateDisplayIP();
 
