@@ -152,7 +152,7 @@ String ConnSDCard::getStatus() {
   uint32_t usedSize = SD.usedBytes() / (1024 * 1024);
   uint32_t totalSize = SD.totalBytes() / (1024 * 1024);
   char buf[256];
-  snprintf(buf, 256, "SD card type: %s [size: %lu MB]. File system: %lu / %lu MB free", cardTypeStr(cardType),
+  snprintf(buf, 256, "SD card type: %s [size: %lu MB]. File system: %lu / %lu MB used", cardTypeStr(cardType),
     cardSize, usedSize, totalSize);
   return String(buf);
 }
