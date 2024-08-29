@@ -94,7 +94,7 @@ void unkHandler(T nmea) {
 // 1 deg = aprox. 100 km  ==> approx. 200m
 #define AUTO_CHASE_THRESHOLD 0.002
 
-//#define DEBUG_GPS
+#define DEBUG_GPS
 static bool gpsCourseOld;
 static int lastCourse;
 void gpsTask(void *parameter) {
@@ -104,7 +104,7 @@ void gpsTask(void *parameter) {
     while (Serial2.available()) {
       if(gotNMEA == 0) gotNMEA = -1; // at least we got *something* 
       char c = Serial2.read();
-      //Serial.print(c);
+      Serial.print(c);
       if (nmea.process(c)) {
         gotNMEA = 1;
         gpsPos.valid = nmea.isValid();
