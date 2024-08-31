@@ -188,7 +188,7 @@ int AXP192PMU::init() {
         enableLDO3();
         // ADC configuration: Enable monitoring of USB [bits 2,3 in enable register]
         uint8_t val = readRegister(AXP192_ADC_EN1);
-        writeRegister(AXP192_ADC_EN1, val | (1 << 4) | (1 << 5) );
+        writeRegister(AXP192_ADC_EN1, val | (1 << 2) | (1 << 3) );
     }
     // Common configuration for T-Beam and M5 Core2
     // DCDC2: M5Core: Unused, T-Beam: Unused, so set to disabled!! (was enabled in previous versions)
@@ -338,7 +338,9 @@ float AXP192PMU::getBattChargeCurrent() {
 
 #define AXP192_ACIN_VOLTAGE_STEP                (1.7F)
 float AXP192PMU::getAcinVoltage() {
-    return readRegisters_8_4(AXP192_ACIN_VOL_H8, AXP192_ACIN_VOL_L4) * AXP192_ACIN_VOLTAGE_STEP;
+    float f = readRegisters_8_4(AXP192_ACIN_VOL_H8, AXP192_ACIN_VOL_L4) * AXP192_ACIN_VOLTAGE_STEP;
+    Serial.printf("Acin: %f\n", f);
+    return f;
 }
 
 #define AXP192_ACIN_CUR_STEP                    (0.625F)
@@ -348,7 +350,9 @@ float AXP192PMU::getAcinCurrent() {
 
 #define AXP192_VBUS_VOLTAGE_STEP                (1.7F)
 float AXP192PMU::getVbusVoltage() {
-    return readRegisters_8_4(AXP192_VBUS_VOL_H8, AXP192_VBUS_VOL_L4) * AXP192_VBUS_VOLTAGE_STEP;
+    float f= readRegisters_8_4(AXP192_VBUS_VOL_H8, AXP192_VBUS_VOL_L4) * AXP192_VBUS_VOLTAGE_STEP;
+    Serial.printf("Vbus: %f\n", f);
+    return f;
 }
 
 #define AXP192_VBUS_CUR_STEP                    (0.375F)

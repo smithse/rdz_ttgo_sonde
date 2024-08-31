@@ -1731,7 +1731,13 @@ void Display::drawBatt(DispEntry *de) {
 		} else {
 		  val = pmu->getVbusVoltage();
 		}
-		if(val<0) { *buf=0; break; }
+		if(val<0) { // make sure to clear old text...
+ 		    int len = strlen(de->extra)-1 + 4;
+		    strcpy(buf, "                    ");
+                    if(len>29) len=29;
+                    buf[len] = 0;
+                    break;
+		}
 		snprintf(buf, 30, "%.2f%s", val/1000, de->extra+1);
 	        Serial.printf("Vbus: %s\n", buf);
 		break;
@@ -1844,19 +1850,23 @@ void Display::updateDisplay() {
 // Called when key is pressed or new RX starts
 void Display::dispsavectlON() {
 	// nothing to do to turn display on, may add power on code here later
+        Serial.println("DISP SAVE: ON");
 	dispstate = 1;
 }
 
 // Should be called 1x / sec to update display
 // parameter: rxactive (1=currently receiving something, 0=no rx)
 void Display::dispsavectlOFF(int rxactive) {
+        Serial.printf("DISP SAVE: OFF %d (state is %d)\n", rxactive, dispstate);
 	if( sonde.config.dispsaver == 0 ) return;  // screensaver disabled
 	if( dispstate == 0 ) return; // already OFF
 	if( rxactive && ((sonde.config.dispsaver%10)==2) ) return; // OFF only if no RX, but rxactive is 0
 	dispstate++;
+        Serial.printf("dispstate is %d\n", dispstate);
 	if( dispstate > (sonde.config.dispsaver/10) ) {
 		rdis->clear();
 		dispstate = 0;
+		Serial.println("Clearning display");
 	}
 }
 
