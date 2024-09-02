@@ -2,6 +2,9 @@
 #include "version.h"
 #include "core.h"
 
+#define TAG "RX_FSK"
+#include "src/logger.h"
+
 #include <dirent.h>
 
 #include <WiFi.h>
@@ -428,7 +431,8 @@ void setupWifiList() {
     i++;
   }
   nNetworks = i;
-  Serial.print(i); Serial.println(" networks in networks.txt\n");
+  LOG_I(TAG, "%d networks in networks.txt\n", i);
+  // Serial.print(i); Serial.println(" networks in networks.txt\n");
   for (int j = 0; j < i; j++) {
     Serial.print(networks[j].id);
     Serial.print(": ");
@@ -1808,6 +1812,7 @@ void setup()
     int v = gpio_get_level((gpio_num_t)i);
     Serial.printf("%d:%d ", i, v);
   }
+  LOG_I(TAG, "sizeof long is %d\n", sizeof(long));
 
 #ifndef REMOVE_ALL_FOR_TESTING
 

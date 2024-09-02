@@ -2,6 +2,10 @@
 #include <U8g2lib.h>
 
 #include "../features.h"
+
+#define TAG "Sonde.cpp"
+#include "src/logger.h"
+
 #include "Sonde.h"
 #include "RS41.h"
 #if FEATURE_RS92
@@ -83,7 +87,7 @@ void Sonde::defaultConfig() {
 	fingerprint = (fingerprint<<1) | initlevels[21];
 	fingerprint = (fingerprint<<1) | initlevels[22];
 	fingerprint = (fingerprint<<1) | initlevels[23];
-	Serial.printf("Board fingerprint is %d\n", fingerprint);
+	LOG_I(TAG, "Board fingerprint is %d\n", fingerprint);
 
 	sondeList = (SondeInfo *)malloc((MAXSONDE+1)*sizeof(SondeInfo));
 	// addSonde should initialize everything anyway, so this should not strictly be necessary, but does no harm either
@@ -131,7 +135,7 @@ void Sonde::defaultConfig() {
 		config.button2_pin = T4 + 128;     // T4 == GPIO13
 		config.power_pout = 21;		   // for Heltec v2
 		config.led_pout = 2;	
-		Serial.println("Autoconfig: looks like TTGO v1 / Heltec v1/V2 board");
+		LOG_I(TAG, "Autoconfig: looks like TTGO v1 / Heltec v1/V2 board\n");
 		// Note: binary image compiled for other boards (40 MHz crystal) will no longer work for v1 board (26 MHz crystal)
 		// -- serial speed is wrong (staring arduino-idf 3.0.4), and WiFi also is partially broken.
 		// So if using that old board, you need to recompile specifically for the 26 MHz.
@@ -143,10 +147,10 @@ void Sonde::defaultConfig() {
 			int tbeam=7;
 			if(initlevels[12]==0) {
 				tbeam = 10;
-				Serial.println("Autoconfig: looks like T-Beam 1.0 or M5Stack Core2 board");
+				LOG_I(TAG, "Autoconfig: looks like T-Beam 1.0 or M5Stack Core2 board\n");
 			} else if ( initlevels[4]==1 && initlevels[12]==1 ) {
 				tbeam = 11;
-				Serial.println("Autoconfig: looks like T-Beam 1.1 board");
+				LOG_I(TAG, "Autoconfig: looks like T-Beam 1.1 board\n");
 			}
 			if(tbeam == 10  || tbeam == 11) {  // T-Beam v1.0  or T-Beam v1.1
 				Wire.begin(21, 22);
@@ -159,7 +163,7 @@ void Sonde::defaultConfig() {
 				  err = Wire.endTransmission();
 				}
 				if(err==0) {
-					Serial.println("M5stack Core2 board detected\n");
+					LOG_I(TAG, "M5stack Core2 board detected\n");
 					config.type = TYPE_M5_CORE2;
 					config.button_pin = 255;
 					config.button2_pin = 255;
@@ -194,9 +198,8 @@ void Sonde::defaultConfig() {
     				    err = Wire.endTransmission();
 				    if(err!=0 && fingerprint!=17) {  // hmm. 17 after powerup with oled commected and no i2c answer!?!?
 					fingerprint |= 128;
-					Serial.println("no I2C display found, assuming large TFT display\n");
+					LOG_I(TAG, "T-Beam, no I2C display found, assuming large TFT display\n");
 					// CS=0, RST=14, RS=2, SDA=4, CLK=13
-					Serial.println("... with large TFT display\n");
 					config.disptype = 1;
 					config.oled_sda = 4;
 					config.oled_scl = 13;
@@ -208,17 +211,17 @@ void Sonde::defaultConfig() {
 				    } else {
 					// OLED display, pins 21,22 ok...
 					config.disptype = 0;
-					Serial.println("... with small OLED display\n");
+					LOG_I(TAG, "T_BEAM with I2C OLED display\n");
 				    }
 				}
 			} else {
-				Serial.println("Autoconfig: looks like T-Beam v0.7 board");
+				LOG_I(TAG, "Autoconfig: looks like T-Beam v0.7 board");
 				config.button_pin = 39;
 				config.button2_pin = T4 + 128;  // T4 == GPIO13
 				config.gps_rxd = 12;
 				// Check if we possibly have a large display
 				if(initlevels[21]==0) {
-					Serial.println("Autoconfig: looks like T-Beam v0.7 board with large TFT display");
+					LOG_I(TAG, "Autoconfig: looks like T-Beam v0.7 board with large TFT display");
 					config.disptype = 1;
 					config.oled_sda = 4;
 					config.oled_scl = 21;
@@ -315,7 +318,7 @@ void Sonde::setConfig(const char *cfg) {
 	char *val = s+1;
 	*s=0; s--;
 	while(s>cfg && (*s==' '||*s=='\t')) { *s=0; s--; }
-	Serial.printf("configuration option '%s'=%s \n", cfg, val);
+	LOG_D(TAG, "configuration option '%s'=%s \n", cfg, val);
 
 	// new code: use config_list to find config entry...
 	int i;
@@ -349,7 +352,7 @@ void Sonde::setConfig(const char *cfg) {
 				if(ptr) *ptr = 0;
 				config.display[idx++] = atoi(val);
 				val = ptr?ptr+1:NULL;
-				Serial.printf("appending value %d  next is %s\n", config.display[idx-1], val?val:"");
+				LOG_D(TAG, "appending value %d  next is %s\n", config.display[idx-1], val?val:"");
 			}
 			config.display[idx] = -1;
 			break;
@@ -362,7 +365,7 @@ void Sonde::setConfig(const char *cfg) {
 		break;
 	}
 	if(i==N_CONFIG) {
-		Serial.printf("Invalid config option '%s'=%s \n", cfg, val);
+		LOG_E(TAG, "Invalid config option '%s'=%s \n", cfg, val);
 	}
 }
 
@@ -376,10 +379,10 @@ void Sonde::clearSonde() {
 }
 void Sonde::addSonde(float frequency, SondeType type, int active, char *launchsite)  {
 	if(nSonde>=config.maxsonde) {
-		Serial.println("Cannot add another sonde, MAXSONDE reached");
+		LOG_E(TAG, "Cannot add another sonde, MAXSONDE reached");
 		return;
 	}
-	Serial.printf("Adding %f - %d - %d - %s\n", frequency, type, active, launchsite);
+	LOG_I(TAG, "Adding %f - %d - %d - %s\n", frequency, type, active, launchsite);
 	// reset all data if type or frequency has changed
 	if(type != sondeList[nSonde].type || frequency != sondeList[nSonde].freq) {
 	    //TODO: Check for potential race condition with decoders
@@ -422,7 +425,7 @@ void Sonde::nextRxSonde() {
 			if(rxtask.currentSonde>=config.maxsonde) rxtask.currentSonde=0;
 		}
 	}
-	//Serial.printf("nextRxSonde: %d\n", rxtask.currentSonde);
+	LOG_D(TAG, "nextRxSonde: %d\n", rxtask.currentSonde);
 }
 void Sonde::nextRxFreq(int addkhz) {
 	// last entry is for the variable frequency
@@ -431,7 +434,7 @@ void Sonde::nextRxFreq(int addkhz) {
 	sondeList[rxtask.currentSonde].freq += addkhz*0.001;
 	if(sondeList[rxtask.currentSonde].freq>406)
 		sondeList[rxtask.currentSonde].freq = 400;
-        Serial.printf("nextRxFreq: %d\n", rxtask.currentSonde);
+        LOG_D(TAG, "nextRxFreq: %d\n", rxtask.currentSonde);
 }
 SondeInfo *Sonde::si() {
 	return &sondeList[currentSonde];
@@ -439,8 +442,7 @@ SondeInfo *Sonde::si() {
 
 void Sonde::setup() {
 	if(rxtask.currentSonde<0 || rxtask.currentSonde>=config.maxsonde) {
-		Serial.print("Invalid rxtask.currentSonde: ");
-		Serial.println(rxtask.currentSonde);
+		LOG_E(TAG, "Invalid rxtask.currentSonde: %d\n", rxtask.currentSonde);
 		rxtask.currentSonde = 0;
 		for(int i=0; i<config.maxsonde - 1; i++) {
 			if(!sondeList[rxtask.currentSonde].active) {
@@ -452,8 +454,7 @@ void Sonde::setup() {
 	}
 
 	// update receiver config
-	Serial.print("Sonde::setup() start on index ");
-	Serial.println(rxtask.currentSonde);
+        LOG_I(TAG, "Sonde::setup() start on index %d\n", rxtask.currentSonde);
 	switch(sondeList[rxtask.currentSonde].type) {
 	case STYPE_RS41:
 		rs41.setup(sondeList[rxtask.currentSonde].freq * 1000000);
@@ -479,7 +480,7 @@ void Sonde::setup() {
 	int freq = (int)sx1278.getFrequency();
 	int afcbw = (int)sx1278.getAFCBandwidth();
 	int rxbw = (int)sx1278.getRxBandwidth();
-	Serial.printf("Sonde::setup() done: Type %s Freq %f, AFC BW: %d, RX BW: %d\n", sondeTypeStr[sondeList[rxtask.currentSonde].type], 0.000001*freq, afcbw, rxbw);
+	LOG_I(TAG, "Sonde::setup() done: Type %s Freq %f, AFC BW: %d, RX BW: %d\n", sondeTypeStr[sondeList[rxtask.currentSonde].type], 0.000001*freq, afcbw, rxbw);
 
 	// reset rxtimer / norxtimer state
 	sonde.sondeList[sonde.currentSonde].lastState = -1;
@@ -521,13 +522,13 @@ void Sonde::receive() {
 			sonde.dispsavectlON();
                 }
         } else { // RX Timeout
-		//Serial.printf("Sonde::receive(): result %d (%s), laststate was %d\n", res, (res<=3)?RXstr[res]:"?", si->lastState);
+		//LOG_I(TAG, "Sonde::receive(): result %d (%s), laststate was %d\n", res, (res<=3)?RXstr[res]:"?", si->lastState);
                 if(si->lastState != 0) {
                         si->norxStart = millis();
                         si->lastState = 0;
                 }
         }
-	// Serial.printf("debug: res was %d, now lastState is %d\n", res, si->lastState);
+	// LOG_I(TAG, "debug: res was %d, now lastState is %d\n", res, si->lastState);
 
 
 	// we should handle timer events here, because after returning from receive,
@@ -538,7 +539,7 @@ void Sonde::receive() {
 	if (!event) event = timeoutEvent(si);
 	else sonde.dispsavectlON();
 	int action = (event==EVT_NONE) ? ACT_NONE : disp.layout->actions[event];
-	//if(action!=ACT_NONE) { Serial.printf("event %x: action is %x\n", event, action); }
+	//if(action!=ACT_NONE) { LOG_I(TAG, "event %x: action is %x\n", event, action); }
 	// If action is to move to a different sonde index, we do update things here, set activate
 	// to force the sx1278 task to call sonde.setup(), and pass information about sonde to
 	// main loop (display update...)
@@ -559,7 +560,7 @@ void Sonde::receive() {
 			rxtask.activate = ACT_SONDE(rxtask.currentSonde);
 		}
 	}
-	Serial.printf("Sonde:receive(): result %d (%s), event %02x => action %02x\n", res, (res<=3)?RXstr[res]:"?", event, action);
+	LOG_I(TAG, "Sonde:receive(): result %d (%s), event %02x => action %02x\n", res, (res<=3)?RXstr[res]:"?", event, action);
 	res = (action<<8) | (res&0xff);
 	// let waitRXcomplete resume...
 	rxtask.receiveResult = res;
@@ -577,20 +578,20 @@ rxloop:
 	}
 	if( rxtask.receiveResult == RX_UPDATERSSI ) {
 		rxtask.receiveResult = 0xFFFF;
-		Serial.printf("RSSI update: %d/2\n", sonde.si()->rssi);
+		LOG_I(TAG, "RSSI update: %d/2\n", sonde.si()->rssi);
 		disp.updateDisplayRSSI();
 		goto rxloop;
 	}
 
 	if( rxtask.receiveResult==0xFFFF) {
-		Serial.println("TIMEOUT in waitRXcomplete. Should never happen!\n");
+		LOG_I(TAG, "TIMEOUT in waitRXcomplete. Should never happen!\n");
 		res = RX_TIMEOUT;
 	} else {
 		res = rxtask.receiveResult;
 	}
         rxtask.receiveResult = 0xFFFF;
 	/// TODO: THis has caused an exception when swithcing back to spectrumm...
-        Serial.printf("waitRXcomplete returning %04x (%s)\n", res, (res&0xff)<4?RXstr[res&0xff]:"");
+        LOG_I(TAG, "waitRXcomplete returning %04x (%s)\n", res, (res&0xff)<4?RXstr[res&0xff]:"");
 	// currently used only by RS92
 	switch(sondeList[rxtask.receiveSonde].type) {
 	case STYPE_RS41:
@@ -621,28 +622,28 @@ rxloop:
 uint8_t Sonde::timeoutEvent(SondeInfo *si) {
 	uint32_t now = millis();
 #if 0
-	Serial.printf("Timeout check: %d - %d vs %d; %d - %d vs %d; %d - %d vs %d; lastState: %d\n",
+	LOG_I(TAG, "Timeout check: %d - %d vs %d; %d - %d vs %d; %d - %d vs %d; lastState: %d\n",
 		now, si->viewStart, disp.layout->timeouts[0],
 		now, si->rxStart, disp.layout->timeouts[1],
 		now, si->norxStart, disp.layout->timeouts[2], si->lastState);
 #endif
 	if(disp.layout->timeouts[0]>=0 && now - si->viewStart >= disp.layout->timeouts[0]) {
-		Serial.println("Sonde::timeoutEvent: View");
+		LOG_I(TAG, "Sonde::timeoutEvent: View");
 		return EVT_VIEWTO;
 	}
 	if(si->lastState==1 && disp.layout->timeouts[1]>=0 && now - si->rxStart >= disp.layout->timeouts[1]) {
-		Serial.println("Sonde::timeoutEvent: RX");
+		LOG_I(TAG, "Sonde::timeoutEvent: RX");
 		return EVT_RXTO;
 	}
 	if(si->lastState==0 && disp.layout->timeouts[2]>=0 && now - si->norxStart >= disp.layout->timeouts[2]) {
-		Serial.println("Sonde::timeoutEvent: NORX");
+		LOG_I(TAG, "Sonde::timeoutEvent: NORX");
 		return EVT_NORXTO;
 	}
 	return 0;
 }
 
 uint8_t Sonde::updateState(uint8_t event) {
-	//Serial.printf("Sonde::updateState for event %02x\n", event);
+	//LOG_I(TAG, "Sonde::updateState for event %02x\n", event);
 	// No change
 	if(event==ACT_NONE) return 0xFF;
 
@@ -674,10 +675,10 @@ uint8_t Sonde::updateState(uint8_t event) {
 	}
 	if(n>=0 && n<ACT_MAXDISPLAY) {
 		if(n>=disp.nLayouts) {
-			Serial.println("WARNNG: next layout out of range");
+			LOG_I(TAG, "WARNNG: next layout out of range");
 			n = config.display[1];
 		}
-		Serial.printf("Setting display mode %d\n", n);
+		LOG_I(TAG, "Setting display mode %d\n", n);
 		disp.setLayout(n);
 		sonde.clearDisplay();
 		return 0xFF;
@@ -687,12 +688,12 @@ uint8_t Sonde::updateState(uint8_t event) {
 	// TODO: THis should be done in sx1278 task, not in main loop!!!!!
 	if(event==ACT_NEXTSONDE) {
 		sonde.nextConfig();
-		Serial.printf("advancing to next sonde %d\n", sonde.currentSonde);
+		LOG_I(TAG, "advancing to next sonde %d\n", sonde.currentSonde);
 		return event;
 	}
 	if (event==ACT_PREVSONDE) {
 		// TODO
-		Serial.printf("previous not supported, advancing to next sonde\n");
+		LOG_I(TAG, "previous not supported, advancing to next sonde\n");
 		sonde.nextConfig();
 		return ACT_NEXTSONDE;
 	}

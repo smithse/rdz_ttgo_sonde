@@ -307,6 +307,8 @@ String ConnGPS::getStatus() {
     snprintf(status + pos, 256-pos, "GPS: valid=%d lat=%.6f lon=%.6f alt=%d<br>", gpsPos.valid, gpsPos.lat, gpsPos.lon, gpsPos.alt);
     pos = strlen(status);
     snprintf(status + pos, 256-pos, "Using station position: valid=%d lat=%.6f lon=%.6f<br>", posInfo.valid, posInfo.lat, posInfo.lon);
+    pos = strlen(status);
+    snprintf(status + pos, 256-pos, "Current NMEA: %s", nmea.getSentence());
     return String(status);
 }
 
