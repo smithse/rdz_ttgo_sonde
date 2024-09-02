@@ -97,6 +97,7 @@ void unkHandler(T nmea) {
 #define DEBUG_GPS
 static bool gpsCourseOld;
 static int lastCourse;
+static char lastnmea[101];
 void gpsTask(void *parameter) {
   nmea.setUnknownSentenceHandler(unkHandler);
 
@@ -106,6 +107,14 @@ void gpsTask(void *parameter) {
       char c = Serial2.read();
       Serial.print(c);
       if (nmea.process(c)) {
+        const char *nmeastring = nmea.getSentence();
+        if(strncmp(nmeastring+3, "GGA", 3)==0 || strncmp(nmeastring+3, "RMC", 3)==0) {
+            strncpy(lastnmea, nmeastring, 100);
+	    Serial.printf("GPS: last position nmea: %s\n", lastnmea);
+ 	}
+ 	else  {
+	    Serial.printf("GPS: last nmea: %s\n", lastnmea);
+	}
         gotNMEA = 1;
         gpsPos.valid = nmea.isValid();
         if (gpsPos.valid) {
@@ -308,7 +317,7 @@ String ConnGPS::getStatus() {
     pos = strlen(status);
     snprintf(status + pos, 256-pos, "Using station position: valid=%d lat=%.6f lon=%.6f<br>", posInfo.valid, posInfo.lat, posInfo.lon);
     pos = strlen(status);
-    snprintf(status + pos, 256-pos, "Current NMEA: %s", nmea.getSentence());
+    snprintf(status + pos, 256-pos, "Current NMEA: %s", lastnmea);
     return String(status);
 }
 
