@@ -113,7 +113,7 @@ void gpsTask(void *parameter) {
 	    Serial.printf("GPS: last position nmea: %s\n", lastnmea);
  	}
  	else  {
-	    Serial.printf("GPS: last nmea: %s\n", lastnmea);
+	    Serial.printf("GPS: last nmea: %s\n", nmeastring);
 	}
         gotNMEA = 1;
         gpsPos.valid = nmea.isValid();
@@ -154,6 +154,7 @@ void gpsTask(void *parameter) {
             }
         }
 
+	//TODO: updating gpsPos is better done ebfore settings posInfo to gpsPos.....
         gpsPos.hdop = nmea.getHDOP();
         gpsPos.sat = nmea.getNumSatellites();
         gpsPos.speed = nmea.getSpeed() / 1000.0 * 0.514444; // speed is in m/s  nmea.getSpeed is in 0.001 knots

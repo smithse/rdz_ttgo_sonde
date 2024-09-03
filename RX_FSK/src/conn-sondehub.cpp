@@ -302,12 +302,21 @@ void ConnSondehub::sondehub_station_update() {
   w = data;
   // not necessary...  memset(w, 0, STATION_DATA_LEN);
 
+  if(strncmp(version_id, "dev2", 4)==0) {
+  sprintf(w,
+          "{"
+          "\"software_name\": \"%s\","
+          "\"software_version\": \"devel%s\","
+          "\"uploader_callsign\": \"%s\",",
+          version_name, version_id+3, conf->callsign);
+  } else {
   sprintf(w,
           "{"
           "\"software_name\": \"%s\","
           "\"software_version\": \"%s\","
           "\"uploader_callsign\": \"%s\",",
           version_name, version_id, conf->callsign);
+  }
   w += strlen(w);
 
   // Only send email if provided
