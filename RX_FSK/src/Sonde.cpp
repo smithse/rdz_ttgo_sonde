@@ -101,6 +101,7 @@ void Sonde::defaultConfig() {
 	config.led_pout = -1;
 	config.power_pout = -1;
 	config.spectrum=10;
+	config.b2mute = 360;
 	// Try autodetecting board type
 	config.type = TYPE_TTGO;
   	// Seems like on startup, GPIO4 is 1 on v1 boards, 0 on v2.1 boards?
@@ -128,6 +129,7 @@ void Sonde::defaultConfig() {
 	config.tft_rs = -1;
 	config.tft_cs = -1;
 	if(initlevels[16]==0) {
+		// TODO: Plain M5 Core Gray ends up here (without Lora/GPS board attached)
 		config.oled_sda = 4;
 		config.oled_scl = 15;
 		config.oled_rst = 16;
@@ -233,6 +235,39 @@ void Sonde::defaultConfig() {
 				}
 			}
 		} else {
+			Serial.println("Looks like a TTGO V2.1_1.6, could also be a M5 Core");
+			// M5 core has I2C devices 0x16 0x68 0x75
+                        Wire.begin(21, 22);
+#define BMM150 0x10
+                        Wire.beginTransmission(BMM150);
+                        byte err = Wire.endTransmission();
+                        if(err) { // try again
+                             delay(400);
+                             Wire.beginTransmission(BMM150);
+                             err = Wire.endTransmission();
+                        }
+                        if(err==0) {
+                            LOG_I(TAG, "M5stack Core Gray board detected\n");
+                            config.type = TYPE_M5_CORE;
+                            config.button_pin = 39;
+                            config.button2_pin = 38;
+                            config.button2_axp = 0;
+                            config.disptype = 4;  // ILI9342
+                            config.oled_sda = 23;
+                            config.oled_scl = 18;
+                            config.oled_rst = 33;
+                            config.tft_rs = 27;
+                            config.tft_cs = 14;
+			    config.power_pout = 32+128;
+			    // gpio32 is backlight of tft
+                            config.screenfile = 4;
+                            config.gps_rxd = 16;
+                            config.gps_txd = -1;  // 17
+                            config.sx1278_ss = 5;
+                            config.sx1278_miso = 19;
+                            config.sx1278_mosi = 23; //MOSI;
+                            config.sx1278_sck = 18; // SCK;
+			} else {
 			// Likely a TTGO V2.1_1.6
 			config.button_pin = 2 + 128;     // GPIO2 / T2
 			config.button2_pin = 14 + 128;   // GPIO14 / T6
@@ -242,6 +277,7 @@ void Sonde::defaultConfig() {
 			config.sd.miso = 2;
 			config.sd.mosi = 15;
 			config.sd.clk = 14;
+			}
 		}
 	}
 	//

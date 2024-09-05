@@ -629,6 +629,7 @@ struct st_configitems config_list[] = {
   {"rxlat", -7, &sonde.config.rxlat},
   {"rxlon", -7, &sonde.config.rxlon},
   {"rxalt", -7, &sonde.config.rxalt},
+  {"b2mute", 0, &sonde.config.b2mute},
   {"screenfile", 0, &sonde.config.screenfile},
   {"display", -6, sonde.config.display},
   {"dispsaver", 0, &sonde.config.dispsaver},
@@ -1514,6 +1515,7 @@ void initTouch() {
     timerAlarmWrite(timer, 300000, true);
     timerAlarmEnable(timer);
   */
+
   if ( IS_TOUCH(sonde.config.button_pin) ) {
     touchAttachInterrupt(sonde.config.button_pin & 0x7f, touchISR, sonde.config.touch_thresh);
     Serial.printf("Initializing touch 1 on pin %d\n", sonde.config.button_pin & 0x7f);
@@ -1611,11 +1613,21 @@ static void checkTouchButton(Button & button) {
   }
 }
 
+static unsigned long t_muted = (unsigned long)-1;
+
 void ledOffCallback() {
   digitalWrite(sonde.config.led_pout, LOW);
 }
 void flashLed(int ms) {
   if (sonde.config.led_pout >= 0) {
+    if(t_muted != -1) {
+      Serial.printf("Muted at %d\n", t_muted);
+      // t_muted was set by key press to mute LED / buzzer
+      if(millis()-t_muted < sonde.config.b2mute * 60000L) return;
+      else t_muted = -1;
+      Serial.printf("Unmuted\n");
+    }
+    Serial.println("Not muted");
     digitalWrite(sonde.config.led_pout, HIGH);
     ledFlasher.once_ms(ms, ledOffCallback);
   }
@@ -1740,6 +1752,10 @@ int getKeyPressEvent() {
     if (p == KP_NONE)
       return EVT_NONE;
     Serial.printf("Key 2 was pressed [%d]\n", p + 4);
+    // maybe not the best place, but easy to do: check for B2 medium keypress to mute LED
+    if(p == KP_MID && sonde.config.b2mute > 0) {
+       if(t_muted==-1) t_muted = millis(); else t_muted = -1;
+    }
     return p + 4;
   }
   Serial.printf("Key 1 was pressed [%d]\n", p);
@@ -1973,6 +1989,14 @@ void setup()
   if (sonde.config.type == TYPE_M5_CORE2) {
     // Core2 uses Pin 38 for MISO
     SPI.begin(18, 38, 23, -1);
+  } else if (sonde.config.type == TYPE_M5_CORE) {
+    SPI.begin(18, 19, 23, -1);
+    // GPIO26 is reset
+    pinMode(26, OUTPUT);
+    digitalWrite(26, 0);
+    delay(5);
+    digitalWrite(26, 1);
+    delay(5);
   } else {
     SPI.begin();
   }

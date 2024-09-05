@@ -509,9 +509,13 @@ void ILI9225Display::begin() {
 	calc_gfx_offsets();
 	// On the M5, the display and the Lora chip are on the same SPI interface (VSPI default pins),
 	// we must use the same SPI bus with correct locking 
+// TODO: Check why there is a hard-coded 38 in here!?!?!?
 	if(sonde.config.type == TYPE_M5_CORE2) {
 		bus = new Arduino_ESP32SPI( sonde.config.tft_rs, sonde.config.tft_cs,
 			sonde.config.oled_scl, sonde.config.oled_sda, 38, VSPI);
+	} else if(sonde.config.type == TYPE_M5_CORE2 || sonde.config.type == TYPE_M5_CORE) {
+		bus = new Arduino_ESP32SPI( sonde.config.tft_rs, sonde.config.tft_cs,
+			sonde.config.oled_scl, sonde.config.oled_sda, 19, VSPI);
 	} else {
 		bus = new Arduino_ESP32SPI( sonde.config.tft_rs, sonde.config.tft_cs,
 			sonde.config.oled_scl, sonde.config.oled_sda, -1, HSPI);
@@ -529,7 +533,7 @@ void ILI9225Display::begin() {
         tft->fillScreen(BLACK);
 	tft->setRotation(sonde.config.tft_orient);
 	tft->setTextWrap(false);
-	if(sonde.config.type == TYPE_M5_CORE2) 
+	if(sonde.config.type == TYPE_M5_CORE2||sonde.config.type==TYPE_M5_CORE) 
 		tft->invertDisplay(true);
 }
 

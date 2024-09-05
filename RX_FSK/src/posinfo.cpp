@@ -4,6 +4,8 @@
 #include <LittleFS.h>
 #include <MicroNMEA.h>
 
+#define TAG "GPS"
+#include "logger.h"
 
 // Sation position obtained from GPS (if available)
 struct StationPos gpsPos;
@@ -45,6 +47,12 @@ void fixedToPosInfo() {
 static char buffer[85];
 static MicroNMEA nmea(buffer, sizeof(buffer));
 
+static int badNMEA = 0, totalNMEA = 0;
+
+template<typename T>
+void badChecksumHandler(T nmea) {
+    badNMEA++;    
+}
 
 /// Arrg. MicroNMEA changes type definition... so lets auto-infer type
 template<typename T>
@@ -94,7 +102,7 @@ void unkHandler(T nmea) {
 // 1 deg = aprox. 100 km  ==> approx. 200m
 #define AUTO_CHASE_THRESHOLD 0.002
 
-#define DEBUG_GPS
+//#define DEBUG_GPS
 static bool gpsCourseOld;
 static int lastCourse;
 static char lastnmea[101];
@@ -105,9 +113,15 @@ void gpsTask(void *parameter) {
     while (Serial2.available()) {
       if(gotNMEA == 0) gotNMEA = -1; // at least we got *something* 
       char c = Serial2.read();
+#if DEBUG_GPS
       Serial.print(c);
+#endif
       if (nmea.process(c)) {
         const char *nmeastring = nmea.getSentence();
+        if(nmeastring[0]=='$') { // looks like a nmea string
+            totalNMEA++;
+            gotNMEA = 1;
+        }
         if(strncmp(nmeastring+3, "GGA", 3)==0 || strncmp(nmeastring+3, "RMC", 3)==0) {
             strncpy(lastnmea, nmeastring, 100);
 	    Serial.printf("GPS: last position nmea: %s\n", lastnmea);
@@ -115,7 +129,6 @@ void gpsTask(void *parameter) {
  	else  {
 	    Serial.printf("GPS: last nmea: %s\n", nmeastring);
 	}
-        gotNMEA = 1;
         gpsPos.valid = nmea.isValid();
         if (gpsPos.valid) {
           gpsPos.lon = nmea.getLongitude() * 0.000001;
@@ -180,61 +193,118 @@ uint8_t ubx_enable_gpgst[] = {UBX_SYNCH_1, UBX_SYNCH_2, 0x06, 0x01, 3, 0, 0xF0, 
 void dumpGPS() {
   while (Serial2.available()) {
     char c = Serial2.read();
-    Serial.printf("%02x ", (uint8_t)c);
+    char d = (c&127)<20 ? '?' : c;
+    Serial.printf("%02x[%c] ", (uint8_t)c, d);
   }
 }
 
+static char h2i(char c) {
+   if(c>='0'&&c<='9') return c-'0';
+   else if (c>='a'&&c<='f') return c-'a'+10;
+   else if (c>='A'&&c<='F') return c-'A'+10;
+   else return 0;
+}
+static uint8_t cs1, cs2;
+static void sendChar(char c) {
+   cs1 += c;
+   cs2 += cs1;
+   char d = (c&127)<20 ? '?' : c;
+   Serial.printf("%02x[%c] ", (uint8_t)c, d);
+   Serial2.write(c);
+}
+static void sendString(const char *p) {
+    bool ubx = false;
+    if(p[0]=='u') { ubx=true; p++; }
+    p++; // skip "
+    if(ubx) { sendChar(UBX_SYNCH_1); sendChar(UBX_SYNCH_2); }
+    cs1 = cs2 = 0;
+    while(*p && *p!='"') {
+        if(*p=='\\') {
+            p++;
+            if(*p=='x') { sendChar( (unsigned char)( 16*h2i(p[1]) + h2i(p[2]) ) ); p+=2; }
+            else if(*p=='n') sendChar('\n');
+            else if (*p=='r') sendChar('\r');
+            else sendChar(*p);
+        } 
+        else sendChar(*p);
+        p++;
+    }
+    if(ubx) { 
+       uint8_t _cs1 = cs1, _cs2 = cs2;
+       sendChar(_cs1); sendChar(_cs2);
+    }
+}
+ 
+
+static int initGPSfromFile(bool reset) {
+    File initgps = LittleFS.open("/gpsinit.txt", FILE_READ);
+    if(!initgps) { LOG_W(TAG, "no gpsinit.txt found, skipping GPS init\n"); return -1; }
+
+    uint16_t lines[100]; // max. 100 lines... (hard coded)
+    uint8_t labels[10];  // max 10 labels (hard coded)
+    char jumpto = 0;
+    while(initgps.available()) {
+        String l = initgps.readStringUntil('\n');
+        const char *p = l.c_str();
+        Serial.printf("\nGPSINIT string '%s'\n", p);
+        if(jumpto > 0) {
+            Serial.printf("is jumpto? %d, %d vs %d\n", p[0], p[1], jumpto);
+            if(*p==':' && p[1] == jumpto) jumpto = 0;
+            continue;
+        }
+        switch(p[0]) {
+        case 'n':  // conditional jump if no reset
+        {
+            if(!reset) {
+                jumpto = p[1];
+		Serial.printf("Jumping to %c\n", jumpto);
+            }
+	    break;
+        }
+        case 'w':  // wait
+	{
+            int t = atoi(p+1);
+	    Serial.printf("Waiting %d ms\n", t);
+            delay(t);
+            dumpGPS();
+            break;
+            // TODO: JUMP
+	}
+        case 'b':  // set baud
+	{
+            int baud = atoi(p+1);
+	    Serial.printf("Setting baud to %d\n", baud);
+            Serial2.begin(baud, SERIAL_8N1, sonde.config.gps_rxd, sonde.config.gps_txd);
+            break;
+	}
+        case 's':  // send string
+	{
+            Serial.printf("Sending string to GPS: ");
+            sendString(p+1);
+            break;
+        }}
+    }
+    return 0;
+}
 
 void initGPS() {
   if (sonde.config.gps_rxd < 0) return; // GPS disabled
   if (sonde.config.gps_txd >= 0) {  // TX enable, thus try setting baud to 9600 and do a factory reset
     File testfile = LittleFS.open("/GPSRESET", FILE_READ);
+    bool reset = false;
     if (testfile && !testfile.isDirectory()) {
+      reset = true;
       testfile.close();
-      Serial.println("GPS resetting baud to 9k6...");
-      /* TODO: debug:
-          Sometimes I have seen the Serial2.begin to cause a reset
-          Guru Meditation Error: Core  1 panic'ed (Interrupt wdt timeout on CPU1)
-         Backtrace: 0x40081d2f:0x3ffc11b0 0x40087969:0x3ffc11e0 0x4000bfed:0x3ffb1db0 0x4008b7dd:0x3ffb1dc0 0x4017afee:0x3ffb1de0 0x4017b04b:0x3ffb1e20 0x4010722b:0x3ffb1e50 0x40107303:0x3ffb1e70 0x4010782d:0x3ffb1e90 0x40103814:0x3ffb1ed0 0x400d8772:0x3ffb1f10 0x400d9057:0x3ffb1f60 0x40107aca:0x3ffb1fb0 0x4008a63e:0x3ffb1fd0
-         #0  0x40081d2f:0x3ffc11b0 in _uart_isr at /Users/hansi/.platformio/packages/framework-arduinoespressif32/cores/esp32/esp32-hal-uart.c:464
-         #1  0x40087969:0x3ffc11e0 in _xt_lowint1 at /home/runner/work/esp32-arduino-lib-builder/esp32-arduino-lib-builder/esp-idf/components/freertos/xtensa_vectors.S:1154
-         #2  0x4000bfed:0x3ffb1db0 in ?? ??:0
-         #3  0x4008b7dd:0x3ffb1dc0 in vTaskExitCritical at /home/runner/work/esp32-arduino-lib-builder/esp32-arduino-lib-builder/esp-idf/components/freertos/tasks.c:3507
-         #4  0x4017afee:0x3ffb1de0 in esp_intr_alloc_intrstatus at /home/runner/work/esp32-arduino-lib-builder/esp32-arduino-lib-builder/esp-idf/components/esp32/intr_alloc.c:784
-         #5  0x4017b04b:0x3ffb1e20 in esp_intr_alloc at /home/runner/work/esp32-arduino-lib-builder/esp32-arduino-lib-builder/esp-idf/components/esp32/intr_alloc.c:784
-         #6  0x4010722b:0x3ffb1e50 in uartEnableInterrupt at /Users/hansi/.platformio/packages/framework-arduinoespressif32/cores/esp32/esp32-hal-uart.c:464
-         #7  0x40107303:0x3ffb1e70 in uartAttachRx at /Users/hansi/.platformio/packages/framework-arduinoespressif32/cores/esp32/esp32-hal-uart.c:464
-         #8  0x4010782d:0x3ffb1e90 in uartBegin at /Users/hansi/.platformio/packages/framework-arduinoespressif32/cores/esp32/esp32-hal-uart.c:464
-         #9  0x40103814:0x3ffb1ed0 in HardwareSerial::begin(unsigned long, unsigned int, signed char, signed char, bool, unsigned long) at /Users/hansi/.platformio/packages/framework-arduinoespressif32/cores/esp32/HardwareSerial.cpp:190
-      */
-      Serial2.begin(115200, SERIAL_8N1, sonde.config.gps_rxd, sonde.config.gps_txd);
-      Serial2.write(ubx_set9k6, sizeof(ubx_set9k6));
-      delay(200);
-      Serial2.begin(38400, SERIAL_8N1, sonde.config.gps_rxd, sonde.config.gps_txd);
-      Serial2.write(ubx_set9k6, sizeof(ubx_set9k6));
-      delay(200);
-      Serial2.begin(19200, SERIAL_8N1, sonde.config.gps_rxd, sonde.config.gps_txd);
-      Serial2.write(ubx_set9k6, sizeof(ubx_set9k6));
-      Serial2.begin(9600, SERIAL_8N1, sonde.config.gps_rxd, sonde.config.gps_txd);
-      delay(1000);
-      dumpGPS();
-      Serial.println("GPS factory reset...");
-      Serial2.write(ubx_factorydef, sizeof(ubx_factorydef));
-      delay(1000);
-      dumpGPS();
-      delay(1000);
-      dumpGPS();
-      delay(1000);
-      dumpGPS();
       LittleFS.remove("/GPSRESET");
     } else {
       Serial.println("GPS reset file: not found/isdir");
-      testfile.close();
+      if(testfile) testfile.close();
+    }
+    if(initGPSfromFile(reset)<0) { // failed, just set to 9k6
       Serial2.begin(9600, SERIAL_8N1, sonde.config.gps_rxd, sonde.config.gps_txd);
     }
-    // Enable GPGST messages
-    Serial2.write(ubx_enable_gpgst, sizeof(ubx_enable_gpgst));
   } else {
+    //TOOD: Also use last baud statement from gps init file...
     Serial2.begin(9600, SERIAL_8N1, sonde.config.gps_rxd, sonde.config.gps_txd);
   }
   xTaskCreate( gpsTask, "gpsTask",
@@ -312,7 +382,10 @@ String ConnGPS::getStatus() {
     if(sonde.config.gps_rxd==-1) strlcat(status, "disabled<br>", 256);
     else if(gotNMEA==0) strlcat(status, "no data<br>", 256);
     else if(gotNMEA<0) strlcat(status, "no NMEA data<br>", 256);
-    else strlcat(status, "ok<br>", 256);
+    else {
+        int l = strlen(status);
+        snprintf(status+l, 256-l, "ok (%d NMEA, %d bad)<br>", totalNMEA, badNMEA);
+    }
     int pos = strlen(status);
     snprintf(status + pos, 256-pos, "GPS: valid=%d lat=%.6f lon=%.6f alt=%d<br>", gpsPos.valid, gpsPos.lat, gpsPos.lon, gpsPos.alt);
     pos = strlen(status);

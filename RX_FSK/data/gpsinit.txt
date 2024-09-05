@@ -1,0 +1,41 @@
+# gps initialization commmands sent at startup
+# '#' lines are ignored (comments)
+# bnnnnn sets baud rate to nnnn
+# s"blabla" sends text blabla via serial. \xnn is a hex charater with code nn; \\ \" \r \n also supported
+# su"blabla" same as s, but prepend ubx sync\append ubx crc at the end
+# wnnnnn waits nnnn milliseconds before continung
+# wnnnnn,a waits nnnn milliseconds, jumps to label nnn if valid NMEA sentences was received in that time interval
+# :x label x
+# there should be a wait between sending something and changing baud as the port is asynchronus and there maybe something in the buffer...
+#
+# no reset requested: jump to label a
+na
+# wait 1 seconds\if NMEA is received jump to label a
+#b9600
+#w1000,a
+# factory reset code\as was implemented in firmware before (hard-coded)
+# try different baud rates and send command to switch to 9600 baud
+b115200
+su"\x06\x00\x14\x00\x01\x00\x00\x00\xC0\x08\x00\x00\x80\x25\x00\x00\x03\x00\x02\x00\x00\x00\x00\x00"
+w200
+b38400
+su"\x06\x00\x14\x00\x01\x00\x00\x00\xC0\x08\x00\x00\x80\x25\x00\x00\x03\x00\x02\x00\x00\x00\x00\x00"
+w200
+b19200
+su"\x06\x00\x14\x00\x01\x00\x00\x00\xC0\x08\x00\x00\x80\x25\x00\x00\x03\x00\x02\x00\x00\x00\x00\x00"
+w200
+b9600
+w800
+# now, send factory reset command and wait 3 seconds
+su"\x06\x09\x0d\x00\xff\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff"
+w3000
+:a
+b9600
+# enable GPGST sentences to get horizontal accuracy (used by app)
+su"\x06\x01\x03\x00\xF0\x07\x02"
+w200
+# set 38400 baud
+su"\x06\x00\x14\x00\x01\x00\x00\x00\xC0\x08\x00\x00\x00\x96\x00\x00\x03\x00\x02\x00\x00\x00\x00\x00"
+w200
+b38400
+

@@ -8,6 +8,7 @@ var cfgs = [
 [ "rxlat", "Receiver fixed latitude"],
 [ "rxlon", "Receiver fixed longitude"],
 [ "rxalt", "Receiver fixed altitude"],
+[ "b2mute", "Button 2/medium press mutes LED/Buzzer (minutes)"],
 [ "", "OLED/TFT display configuration", "https://github.com/dl9rdz/rdz_ttgo_sonde/wiki/Display-configuration" ],
 [ "screenfile", "Screen config (0=automatic; 1-5=predefined; other=custom)" ],
 [ "display", "Display screens (scan, default, ...)" ],

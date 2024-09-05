@@ -243,7 +243,7 @@ struct st_sdcard {
 };
 
 // to be extended
-enum { TYPE_TTGO, TYPE_M5_CORE2 };
+enum { TYPE_TTGO, TYPE_M5_CORE2, TYPE_M5_CORE };
 
 typedef struct st_rdzconfig {
 	int type;			// autodetected type, TTGO or M5_CORE2
@@ -275,6 +275,7 @@ typedef struct st_rdzconfig {
 	double rxlon;
 	double rxalt;
 	int wifi;				// connect to known WLAN 0=skip
+        uint16_t b2mute;			// mute LED/Buzzer for x minutes, 0=0ff
 	int screenfile;
 	int8_t display[30];			// list of display mode (0:scanner, 1:default, 2,... additional modes)
 	int dispsaver;			// Turn display on/off (0=always on, 10*n+1: off after n seconds, 
