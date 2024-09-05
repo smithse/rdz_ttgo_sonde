@@ -2451,8 +2451,11 @@ void WiFiEvent(WiFiEvent_t event)
       if (wifi_state == WIFI_CONNECT) {
         // If we get a disconnect event while waiting for connection (as I do sometimes with my FritzBox),
         // just start from scratch with WiFi scan
-        wifi_state = WIFI_DISABLED;
-        WiFi.disconnect(true);
+        //wifi_state = WIFI_DISABLED;
+        //%WiFi.disconnect(true);
+	// lets try somethign else:
+	WiFi.reconnect();
+	break;
       }
       WiFi.mode(WIFI_MODE_NULL);
       break;
@@ -2553,8 +2556,8 @@ void wifiConnect(int16_t res) {
   WiFi.scanDelete();
   if (bestEntry >= 0) {
     Serial.printf("WiFi Connecting BSSID: %02X:%02X:%02X:%02X:%02X:%02X SSID: %s PW %s Channel: %d (RSSI %d)\n", bestBSSID[0], bestBSSID[1], bestBSSID[2], bestBSSID[3], bestBSSID[4], bestBSSID[5], fetchWifiSSID(bestEntry), fetchWifiPw(bestEntry), bestChannel, bestRSSI);
-    WiFi.begin(fetchWifiSSID(bestEntry), fetchWifiPw(bestEntry), bestChannel, bestBSSID);
     wifi_state = WIFI_CONNECT;
+    WiFi.begin(fetchWifiSSID(bestEntry), fetchWifiPw(bestEntry), bestChannel, bestBSSID);
   } else {
     // rescan
     // wifiStart();
@@ -2565,8 +2568,8 @@ void wifiConnect(int16_t res) {
 
 void wifiConnectDirect(int16_t index) {
   Serial.println("AP mode 4: trying direct reconnect");
-  WiFi.begin(fetchWifiSSID(index), fetchWifiPw(index));
   wifi_state = WIFI_CONNECT;
+  WiFi.begin(fetchWifiSSID(index), fetchWifiPw(index));
 }
 
 static int wifi_cto;
