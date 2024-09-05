@@ -2454,10 +2454,15 @@ void WiFiEvent(WiFiEvent_t event)
         //wifi_state = WIFI_DISABLED;
         //%WiFi.disconnect(true);
 	// lets try somethign else:
-	WiFi.reconnect();
+	/// This is not a good idea, lets check what if we do nothing:   WiFi.reconnect();
+	Serial.println("WiFi State was connect");
 	break;
       }
+      Serial.printf("Turning off (state is %d)\n", wifi_state);
       WiFi.mode(WIFI_MODE_NULL);
+      break;
+    case ARDUINO_EVENT_WIFI_OFF:
+      Serial.println("WiFi is OFF");
       break;
     case ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE:
       Serial.println("Authentication mode of access point has changed");
@@ -2750,6 +2755,8 @@ void loopWifiScan() {
 
       disp.rdis->drawString(0, lastl, "Conn:");
       disp.rdis->drawString(6 * dispxs, lastl, fetchWifiSSID(index));
+      // TODO: wifi_state is used inconsistently
+      wifi_state = WIFI_CONNECT;
       WiFi.begin(fetchWifiSSID(index), fetchWifiPw(index));
     } else {
       abort = 2;  // no network found in scan => abort right away
