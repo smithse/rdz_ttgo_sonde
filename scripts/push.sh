@@ -25,7 +25,7 @@ generate_website_index() {
   echo '</header><section><h1 id="rdz_ttgo_sonde">rdz_ttgo_sonde</h1>' >> download.html
 
   echo "<h2>Main repository (future...)</h2><ul>" >> download.html
-  for i in `ls main|sort -r`; do
+  for i in `ls main|sort -r|grep -v update-info`; do
     TS=`git log main/$i | grep "Date:" | head -1 | awk '{$1="";$2="";$7="";print substr($0,3,length($0)-3)}'`
     if [ -z "$TS" ]; then TS=`date`; fi
     echo "<li><a href=\"main/$i\">$i</a> ($TS)</li>\n" >> download.html
@@ -36,16 +36,16 @@ generate_website_index() {
     TS=`git log dev2/$i | grep "Date:" | head -1 | awk '{$1="";$2="";$7="";print substr($0,3,length($0)-3)}'`
     if [ -z "$TS" ]; then TS=`date`; fi
     VERS=`basename $i -full.bin`
-    CL=`cat dev2/${VERS}-changelog.txt 2>/dev/null`
+    CL=$(awk '{printf "%s; ", $0}' dev2/${VERS}-changelog.txt 2>/dev/null)
     echo "VERS $VERS: CL $CL"
     echo "<li><a href=\"dev2/$i\">$i</a> ($TS)" >> download.html
-    if [ -n "${CL}" ]; then echo "<br>${CL}" >> download.html; fi
+    if [ -n "${CL}" ]; then echo "<br>${CL%??}" >> download.html; fi
     echo "</li>\n" >> download.html
   done
   echo "</ul>" >> download.html
 
   echo "<h2>Master repository (old IDF environment)</h2><ul>" >> download.html
-  for i in `ls master|sort -r`; do
+  for i in `ls master|sort -r|grep -v update-info`; do
     TS=`git log master/$i | grep "Date:" | head -1 | awk '{$1="";$2="";$7="";print substr($0,3,length($0)-3)}'`
     if [ -z "$TS" ]; then TS=`date`; fi
     echo "<li><a href=\"master/$i\">$i</a> ($TS)</li>\n" >> download.html;
@@ -86,6 +86,7 @@ commit_website_files() {
   cd /tmp
   git clone https://${GITHUB_API_KEY}@github.com/dl9rdz/rdz_ttgo_sonde.git -b gh-pages
   cd rdz_ttgo_sonde
+  git pull
   mkdir -p master
   mkdir -p devel
   mkdir -p main
