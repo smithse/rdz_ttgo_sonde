@@ -1297,7 +1297,11 @@ void SetupAsyncServer() {
     AsyncWebServerResponse *response = request->beginChunkedResponse("application/json", [dir, dent](uint8_t *buf, size_t maxLen, size_t index) mutable -> size_t {
       Serial.printf("[HTTP]\tINDEX [%d]\tBUFFER_MAX_LENGHT [%d]\r\n", index, maxLen);
       if(index==0) {
-        dent = readdir(dir);
+        if(!dir) {
+		dent = NULL;
+	}else {
+         	dent = readdir(dir);
+	}
         strcpy((char *)buf, "[ \n");
         if(dent==NULL) { strcpy( (char*)buf+2, "]"); return 3; }
         return 3;
