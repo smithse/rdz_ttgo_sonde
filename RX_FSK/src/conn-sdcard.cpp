@@ -154,6 +154,7 @@ String ConnSDCard::getStatus() {
   char buf[256];
   snprintf(buf, 256, "SD card type: %s [size: %lu MB]. File system: %lu / %lu MB used", cardTypeStr(cardType),
     cardSize, usedSize, totalSize);
+  strlcat(buf, "; <a href=\\\"/sdfiles.html\\\">SD-Card content</a>", 256);
   return String(buf);
 }
 

@@ -853,6 +853,9 @@ int RS41::decode41(byte *data, int maxlen)
                                                     calibration->value.calTU, calibration->value.taylorTU, calibration->value.polyTrh );
                Serial.printf("Humidity Sensor temperature = %f\n", si->tempRHSensor );
                si->relativeHumidity = GetRAHumidity( humidityMain, humidityRef1, humidityRef2, si->tempRHSensor, si->temperature, si->pressure );
+	       // drop humidity if invalid. faulty sonde can cause a value INFINITY that breaks JSON export.
+	       // We must make sure that humitidy is either a number of NAN (INFINIT is >100 so this is handled correctly now)
+	       if(si->relativeHumidity<0 || si->relativeHumidity>100) si->relativeHumidity = NAN;
                Serial.printf("Relative humidity = %f\n", si->relativeHumidity );
             }
          }
