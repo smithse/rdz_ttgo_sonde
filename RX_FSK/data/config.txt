@@ -40,7 +40,7 @@ tft_orient=1
 maxsonde=20
 debug=0
 # wifi mode: 1=client in background; 2=AP in background; 3=client on startup, ap if failure
-wifi=4
+wifi=3
 # TCP/IP KISS TNC in port 14590 for APRSdroid (0=disabled, 1=enabled)
 kisstnc.active = 1
 
