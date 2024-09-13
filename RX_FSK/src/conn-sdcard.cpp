@@ -41,6 +41,7 @@ void ConnSDCard::init() {
   uint32_t totalSize = SD.totalBytes() / (1024 * 1024);
   Serial.printf("SD Card used/total: %lu/%lu MB\n", usedSize, totalSize);
 
+#if 0
   file = SD.open("/data.csv", FILE_APPEND);
   if (!file) {
     Serial.println("Cannot open file");
@@ -51,7 +52,6 @@ void ConnSDCard::init() {
 
   //sdf = SD.open("/data.csv", FILE_READ);
 
-#if 0
   // Just testcode
   DIR *dir = opendir("/sd/");
   struct dirent *dent;

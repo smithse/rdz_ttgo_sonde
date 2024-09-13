@@ -73,15 +73,24 @@ void ConnAPRS::updateSonde( SondeInfo *si ) {
     char *str = aprs_senddata(si, sonde.config.call, sonde.config.objcall, sonde.config.tcpfeed.symbol);
 
     Serial.printf("udpfedd active: %d  tcpfeed active: %d\n", sonde.config.udpfeed.active, sonde.config.tcpfeed.active);
+    unsigned long now = millis();
     // Output via AXUDP
     if(sonde.config.udpfeed.active) {
-        char raw[201];
-        int rawlen = aprsstr_mon2raw(str, raw, APRS_MAXLEN);
-        Serial.println("Sending AXUDP");
-        //Serial.println(raw);
-         udp.beginPacket(udphost, udpport);
-         udp.write((const uint8_t *)raw, rawlen);
-         udp.endPacket();
+	static unsigned long lastudp = 0;
+	long tts = sonde.config.udpfeed.ratelimit * 1000L - (now - lastudp);
+	Serial.printf("aprs-udp: now-last = %ld\n", (now - lastudp));
+	if ( tts < 0 ) {
+            char raw[201];
+            int rawlen = aprsstr_mon2raw(str, raw, APRS_MAXLEN);
+            Serial.println("Sending AXUDP");
+            //Serial.println(raw);
+            udp.beginPacket(udphost, udpport);
+            udp.write((const uint8_t *)raw, rawlen);
+            udp.endPacket();
+	    lastudp = now;
+	} else {
+	    Serial.printf("Sending APRS-UDP in %d s\n", (int)(tts/1000));
+	}
     }
     // KISS via TCP (incoming connection, e.g. from APRSdroid
     if (tncclient.connected()) {
@@ -96,7 +105,6 @@ void ConnAPRS::updateSonde( SondeInfo *si ) {
         static unsigned long lasttcp = 0;
         tcpclient_fsm();
         if(aprs[0].tcpclient_state == TCS_CONNECTED || aprs[1].tcpclient_state == TCS_CONNECTED) {
-            unsigned long now = millis();
             long tts =  sonde.config.tcpfeed.highrate * 1000L - (now-lasttcp);
             Serial.printf("aprs: now-last = %ld\n", (now - lasttcp));
             if ( tts < 0 ) {

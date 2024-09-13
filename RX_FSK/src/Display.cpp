@@ -482,6 +482,7 @@ struct gfxoffset_t gfxoffsets[MAXFONT];
 
 void calc_gfx_offsets() {
 	for(int i=0; i<ngfx; i++) {
+
 		// find offset from top to baseline
 		int bofs = 0;
 		GFXglyph *g = gfl[i]->glyph;
@@ -496,6 +497,9 @@ void calc_gfx_offsets() {
 			if(h>hgt) hgt=h;
 		}
 		gfxoffsets[i].yclear = hgt;
+///// 	The GFX library does things differently, and if we end up with a smaller baseline then positions might be out of bounds
+/////   causing a lack of background on ILI9342.  Make sure that we use a large enough baseline!
+	        gfxoffsets[i].yofs = gfl[i]->yAdvance * 2 / 3;
 		printf("Font %d: yofs=%d, yclear=%d\n", i, gfxoffsets[i].yofs, gfxoffsets[i].yclear);
 	}
 }
