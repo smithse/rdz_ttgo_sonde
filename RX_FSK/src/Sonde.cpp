@@ -18,8 +18,6 @@
 #include "Display.h"
 #include <Wire.h>
 
-uint8_t debug = 255-8-16;
-
 RXTask rxtask = { -1, -1, -1, 0xFFFF, 0 };
 
 const char *evstring[]={"NONE", "KEY1S", "KEY1D", "KEY1M", "KEY1L", "KEY2S", "KEY2D", "KEY2M", "KEY2L",

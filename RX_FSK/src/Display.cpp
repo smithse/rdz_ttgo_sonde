@@ -607,7 +607,7 @@ void ILI9225Display::drawString(uint16_t x, uint16_t y, const char *s, int16_t w
 	// Standard font
 	if(findex==0) {
 		SPI_MUTEX_LOCK();
-		DebugPrintf(DEBUG_DISPLAY, "Simple Text %s at %d,%d [%d]\n", s, x, y, width); 
+		LOG_D(TAG, "Simple Text %s at %d,%d [%d]\n", s, x, y, width); 
 		// for gpx fonts and new library, cursor is at baseline!!
 		int h = 6;
 		if( alignright ) {
@@ -648,7 +648,7 @@ void ILI9225Display::drawString(uint16_t x, uint16_t y, const char *s, int16_t w
 	}
 
 	if(findex-1>=ngfx) findex=1;
-	DebugPrintf(DEBUG_DISPLAY,"GFX Text %s at %d,%d+%d in color %x, width=%d (w=%d)\n", s, x, y, gfxoffsets[findex-1].yofs, fg, width, w);
+	LOG_D(TAG, "GFX Text %s at %d,%d+%d in color %x, width=%d (w=%d)\n", s, x, y, gfxoffsets[findex-1].yofs, fg, width, w);
 #if 0
 	// Text by clear rectangle and refill, causes some flicker
 	tft->fillRectangle(x, y, x + width, y + gfxoffsets[findex-1].yclear, bg);
@@ -668,11 +668,11 @@ void ILI9225Display::drawString(uint16_t x, uint16_t y, const char *s, int16_t w
 	if(alignright) {
 		// fill with bg from x+w to width
 		if(width>w) tft->fillRect( x, y, width-w, height, bg);
-		DebugPrintf(DEBUG_DISPLAY,"rtext fill %d %d %d %d -- %d %d\n", x, y, width-w, height, x1, y1);
+		LOG_D(TAG, "rtext fill %d %d %d %d -- %d %d\n", x, y, width-w, height, x1, y1);
 	} else {
 		// fill with bg from x+w to width
 		if(width>w) tft->fillRect( x+w, y, width-w, height, bg);
-		DebugPrintf(DEBUG_DISPLAY,"ltext fill %d %d %d %d -- %d %d\n", x+w, y, width-w, height, x1, y1);
+		LOG_D(TAG, "ltext fill %d %d %d %d -- %d %d\n", x+w, y, width-w, height, x1, y1);
 	}
 #else
 	uint16_t height = gfxoffsets[findex-1].yclear;
@@ -687,10 +687,10 @@ void ILI9225Display::drawString(uint16_t x, uint16_t y, const char *s, int16_t w
 	int x0 = 0;
 	if(alignright) { x0 = width - w; }
 	int y0 = gfxoffsets[findex-1].yofs;
-	DebugPrintf(DEBUG_DISPLAY,"GFX: w=%d h=%d\n", width, height);
+	LOG_D(TAG, "GFX: w=%d h=%d\n", width, height);
 	for (uint8_t k = 0; k < strlen(s); k++) {	
 		x0 += tft->drawGFXcharBM(x0, y0, s[k], fg, bitmap, width, height) + 1;
-		DebugPrintf(DEBUG_DISPLAY,"[%c->%d]",s[k],x0);
+		LOG_D(TAG, "[%c->%d]",s[k],x0);
 	}
 	// TODO: if x+width exceeds display width, garbage is generated....
 	drawBitmap(x, y, bitmap, width, height);
@@ -1092,7 +1092,7 @@ void Display::initFromFile(int index) {
 		const char *ptr;
 		readLine(d, lineBuf, LINEBUFLEN);
 		const char *s = trim(lineBuf);
-		DebugPrintf(DEBUG_SPARSER, "Line: '%s'\n", s);
+		LOG_D(TAG, "Line: '%s'\n", s);
 		if(*s == '#') continue;  // ignore comments
 		switch(what) {
 			case -1:	// wait for start of screen (@)
@@ -1104,7 +1104,7 @@ void Display::initFromFile(int index) {
 					}
 					char *label = strdup(s+1);
 					entrysize = countEntries(d);
-					DebugPrintf(DEBUG_SPARSER,"Reading entry with %d elements\n", entrysize);
+					LOG_D(TAG, "Reading entry with %d elements\n", entrysize);
 					idx++;
 					int res = allocDispInfo(entrysize, &newlayouts[idx], label);
 					if(res<0) {
@@ -1118,7 +1118,7 @@ void Display::initFromFile(int index) {
 				if(strncmp(s,"timer=",6)==0) {  // timer values
 					char t1[10],t2[10],t3[10];
 					sscanf(s+6, "%5[0-9a-zA-Z-] , %5[0-9a-zA-Z-] , %5[0-9a-zA-Z-]", t1, t2, t3);
-					DebugPrintf(DEBUG_SPARSER,"timers are %s, %s, %s\n", t1, t2, t3);
+					LOG_D(TAG, "timers are %s, %s, %s\n", t1, t2, t3);
 					newlayouts[idx].timeouts[0] = (*t1=='n'||*t1=='N')?sonde.config.norx_timeout:atoi(t1);
 					newlayouts[idx].timeouts[1] = (*t2=='n'||*t2=='N')?sonde.config.norx_timeout:atoi(t2);
 					newlayouts[idx].timeouts[2] = (*t3=='n'||*t3=='N')?sonde.config.norx_timeout:atoi(t3);
@@ -1174,7 +1174,7 @@ void Display::initFromFile(int index) {
 					newlayouts[idx].de[what].y = y;
 					newlayouts[idx].de[what].width = n>2 ? w : WIDTH_AUTO;
 					parseDispElement(text, newlayouts[idx].de+what);
-					DebugPrintf(DEBUG_SPARSER,"entry at %d,%d width=%d font %d, color=%x,%x\n", (int)x, (int)y, newlayouts[idx].de[what].width, newlayouts[idx].de[what].fmt,
+					LOG_D(TAG, "entry at %d,%d width=%d font %d, color=%x,%x\n", (int)x, (int)y, newlayouts[idx].de[what].width, newlayouts[idx].de[what].fmt,
 							newlayouts[idx].de[what].fg, newlayouts[idx].de[what].bg);
 					if(newlayouts[idx].de[what].func == disp.drawGPS) {
 						newlayouts[idx].usegps = GPSUSE_BASE|GPSUSE_DIST|GPSUSE_BEARING; // just all for now
@@ -1288,7 +1288,7 @@ void Display::drawVS(DispEntry *de) {
 		return;
 	}
 	snprintf(buf, 16, "  %+2.1f", sonde.si()->d.vs);
-	DebugPrintf(DEBUG_DISPLAY, "drawVS: extra is %s width=%d\n", de->extra?de->extra:"<null>", de->width);
+	LOG_D(TAG, "drawVS: extra is %s width=%d\n", de->extra?de->extra:"<null>", de->width);
 	if(de->extra) { strcat(buf, de->extra); }
 	drawString(de, buf+strlen(buf)-5- (de->extra?strlen(de->extra):0) );
 	if(!de->extra) rdis->drawTile(de->x+5,de->y,2,ms_tiles);
@@ -1523,7 +1523,7 @@ void Display::calcGPS() {
 		gpsBear = -1;
 	}
 
-	DebugPrintf(DEBUG_DISPLAY, "GPS data: valid%d  GPS at %f,%f (alt=%d,cog=%d);  sonde at dist=%d, dir=%d rel.bear=%d\n",gpsPos.valid?1:0,
+	LOG_D(TAG, "GPS data: valid%d  GPS at %f,%f (alt=%d,cog=%d);  sonde at dist=%d, dir=%d rel.bear=%d\n",gpsPos.valid?1:0,
 			gpsPos.lat, gpsPos.lon, gpsPos.alt, gpsPos.course, gpsDist, gpsDir, gpsBear);
 }
 

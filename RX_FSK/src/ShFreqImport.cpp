@@ -214,6 +214,7 @@ int ShFreqImport::handleChar(char c) {
 // lat lon in deg, dist in km, time in minutes
 int ShFreqImport::shImportSendRequest(int client, float lat, float lon, int dist, int time) {
 #if 0
+// This should now be checked by caller.... call this function only if connected (and idle)!
 // caller should call only if connected..
 	if(!client->connected()) {
 		if(!client->connect(sonde.config.sondehub.host, 80)) {
@@ -240,15 +241,10 @@ int ShFreqImport::shImportSendRequest(int client, float lat, float lon, int dist
 }
 
 // return 0 if more data should be read (later), 1 if finished (close connection...)
-int ShFreqImport::shImportHandleReply(int client) {
-#if 0
-// TODO::::
-
-	if(!client->connected()) return 1;
-	while(client->available()) {
-		int res = handleChar(client->read());
-		if(res) return res;
-	}
-#endif
+int ShFreqImport::shImportHandleReply(const char *buf, int len) {
+	for(int i=0; i<len; i++) {
+	    int ret = handleChar(buf[i]);
+	    if(ret) return ret;
+        }
 	return 0;
 }

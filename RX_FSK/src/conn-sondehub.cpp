@@ -2,6 +2,9 @@
 #include <sstream>
 #include <iomanip>
 
+#define TAG "conn-sondehub"
+#include "logger.h"
+
 #if FEATURE_SONDEHUB
 
 #include "conn-sondehub.h"
@@ -27,8 +30,7 @@ extern const char *version_id;
 int shclient;    // Sondehub v2
 ip_addr_t shclient_ipaddr;
 
-int shImportInterval = 0;
-char shImport = 0;
+unsigned long time_next_import = 0;
 unsigned long time_last_update = 0;
 
 enum SHState { SH_DISCONNECTED, SH_DNSLOOKUP, SH_DNSRESOLVED, SH_CONNECTING, SH_CONN_IDLE, SH_CONN_APPENDING, SH_CONN_WAITACK, SH_CONN_WAITIMPORTRES };
@@ -67,7 +69,7 @@ void ConnSondehub::netsetup() {
         time_last_update = 0; /* force sending update */ 
 
 	// SH import: initial refresh on connect, even if configured interval is longer
-        shImportInterval = 5;   // refresh now in 5 seconds
+        time_next_import = millis() + 5000;
     } 
 }
 
@@ -80,10 +82,9 @@ void ConnSondehub::netsetup() {
 void ConnSondehub::updateSonde( SondeInfo *si ) {
     if (!sonde.config.sondehub.active)
         return;
-    Serial.println("SH: updateSonde called");
+    LOG_D(TAG, "updateSonde: si:%s, SH_FSM in state %d (%s), next import in %d s\n", si?"yes":"null", shclient_state, state2str(shclient_state), (time_next_import-millis())/1000);
     sondehub_client_fsm();
 
-    sondehub_reply_handler();  // TODO remove, done by fsm??
     if(si==NULL) {
         sondehub_finish_data();
     } else {
@@ -91,15 +92,6 @@ void ConnSondehub::updateSonde( SondeInfo *si ) {
     }
 }
 
-
-void ConnSondehub::updateStation( PosInfo *pi ) {
-    if (!sonde.config.sondehub.active)
-        return;
-    Serial.println("SH: updateStation called");
-    sondehub_client_fsm();
-    // Currently, internal reply_handler uses gpsInfo global variable instead of this pi
-    sondehub_station_update();
-}
 
 static void _sh_dns_found(const char * name, const ip_addr_t *ipaddr, void * /*arg*/) {
     if (ipaddr) {
@@ -109,6 +101,7 @@ static void _sh_dns_found(const char * name, const ip_addr_t *ipaddr, void * /*a
         memset(&shclient_ipaddr, 0, sizeof(shclient_ipaddr));
         shclient_state = SH_DISCONNECTED;   // DNS lookup failed
         // TODO: set "reply messge" to "DNS lookup failed"
+	snprintf(rs_msg, MSG_SIZE, "DNS lookup failed for %s", name);
     }
 }
 
@@ -121,7 +114,7 @@ void ConnSondehub::sondehub_client_fsm() {
     FD_SET(shclient, &fdeset);
     struct timeval selto = {0};
  
-    Serial.printf("SH_FSM in state %d (%s)\n", shclient_state, state2str(shclient_state));
+    // LOG_D(TAG, "SH_FSM in state %d (%s), next import in %d s\n", shclient_state, state2str(shclient_state), (time_next_import-millis())/1000);
 
     switch(shclient_state) {
     case SH_DISCONNECTED:
@@ -145,7 +138,7 @@ void ConnSondehub::sondehub_client_fsm() {
         shclient = socket(AF_INET, SOCK_STREAM, 0);
         int flags  = fcntl(shclient, F_GETFL);
         if (fcntl(shclient, F_SETFL, flags | O_NONBLOCK) == -1) {
-            Serial.println("Setting O_NONBLOCK failed");
+            LOG_E(TAG, "Setting O_NONBLOCK failed\n");
         }
 
         struct sockaddr_in sock_info;
@@ -174,7 +167,7 @@ void ConnSondehub::sondehub_client_fsm() {
 // Poll to see if we are now connected 
         int res = select(shclient+1, NULL, &fdset, &fdeset, &selto);
         if(res<0) {
-            Serial.println("SH_CONNECTING: select error");
+            LOG_E(TAG, "SH_CONNECTING: select error\n");
             goto error;
         } else if (res==0) { // still pending
             break;
@@ -186,9 +179,9 @@ void ConnSondehub::sondehub_client_fsm() {
         if (getsockopt(shclient, SOL_SOCKET, SO_ERROR, (void*)(&sockerr), &len) < 0) {
             goto error;
         }
-        Serial.printf("select returing %d. isset:%d iseset:%d sockerr:%d\n", res, FD_ISSET(shclient, &fdset), FD_ISSET(shclient, &fdeset), sockerr);
+        LOG_D(TAG, "select returing %d. isset:%d iseset:%d sockerr:%d\n", res, FD_ISSET(shclient, &fdset), FD_ISSET(shclient, &fdeset), sockerr);
         if(sockerr) {
-            Serial.printf("SH connect error: %s\n", strerror(sockerr));
+            LOG_E(TAG, "SH connect error: %s\n", strerror(sockerr));
             goto error;
         }
         shclient_state = SH_CONN_IDLE;
@@ -197,17 +190,29 @@ void ConnSondehub::sondehub_client_fsm() {
     break;
 
     case SH_CONN_IDLE:
+	// if idle, check if we might want to send freq import request
+        if (sonde.config.sondehub.fiactive)  {
+            unsigned long now = millis();
+            if(now > time_next_import) {
+                sondehub_send_fimport();
+            }
+        }
+
+	// Intentional fall-through: in idle state, read any data out of connection
+	// in CONN_WAITACK we switch to IDLE as soon as we see the HTTP header
+
     case SH_CONN_WAITACK:
+    case SH_CONN_WAITIMPORTRES:
     {
         // In CONN_WAITACK:
         // If data starts with HTTP/1 this is the expected response, move to state CONN_IDLE
         //   noise tolerant - should not be needed:
         //   if the data contains HTTP/1 copy that to the start of the buffer, ignore anything up to that point
         //   if not find the last \0 and append next response after the part afterwards
-
+      for(int k=0; k<10; k++) { // read more data...
         int res = select(shclient+1, &fdset, NULL, NULL, &selto);
         if(res<0) {
-            Serial.println("SH_CONN_IDLE: select error");
+            LOG_E(TAG, "SH_CONN_IDLE: select error\n");
             goto error;
         } else if (res==0) { //  no data
             break;
@@ -225,33 +230,39 @@ void ConnSondehub::sondehub_client_fsm() {
                    rs_msg[rs_msg_len] = buf[i];
                    rs_msg_len++;
                }
-               if(shclient_state == SH_CONN_WAITACK) {
-                   if(buf[i]=='\n') {
-                       // We still wait for the beginning of the ACK
-		       // so check if we got that. if yes, all good, continue reading :)
-                       // If not, ignore everything we have read so far...
-                       if(strncmp(rs_msg, "HTTP/1", 6)==0) { shclient_state = SH_CONN_IDLE; }
-                       else rs_msg_len = 0;
-                   }
-                }
+	       if(shclient_state == SH_CONN_WAITACK) { 
+      		  if(buf[i]=='\n') { 
+        	    // We still wait for the beginning of the ACK
+        	    // so check if we got that. if yes, all good, continue reading :)
+        	    // If not, ignore everything we have read so far...
+        	    if(strncmp(rs_msg, "HTTP/1", 6)==0) { shclient_state = SH_CONN_IDLE; }
+        	    else rs_msg_len = 0;
+                 }
+               }
             }
-            rs_msg[rs_msg_len] = 0;
+            if( shclient_state == SH_CONN_WAITIMPORTRES ) {   // we are waiting for a reply to a sondehub frequency import request
+                int import_res = ShFreqImport::shImportHandleReply(buf, res);
+    		LOG_D(TAG, "shImportHandleReply: ret=%d\n", import_res);
+    		// import_ress==0 means more data is expected, import_res==1 means complete reply received (or error)
+    		if (import_res == 1) {
+      			shclient_state = SH_CONN_IDLE;
+			time_next_import = millis() + sonde.config.sondehub.fiinterval * 60000;
+    		}
+            }
+	}
+        rs_msg[rs_msg_len] = 0;
+	buf[res] = 0;
 
-            Serial.printf("shclient data (len=%d):", res);
-            Serial.write( (uint8_t *)buf, res );
-	    // TODO: Maybe timestamp last received data?
-            // TODO: Maybe repeat
-            // TODO: Add timeout to WAITACK...
-        }
+        LOG_D(TAG, "client_fsm: got data (len=%d): %s\n", res, (char *)buf);
+	// TODO: Maybe timestamp last received data?
+        // TODO: Maybe repeat
+        // TODO: Add timeout to WAITACK...
+      }//for k=0..10
     }
     break;
 
-    case SH_CONN_WAITIMPORTRES:
-        sondehub_reply_handler();
-        break;
-
     default:
-        Serial.println("UNHANLDED CASE: SHOULD NOT HAPPAN*****");
+        LOG_E(TAG, "UNHANLDED CASE: SHOULD NOT HAPPAN*****");
     }
     return;
 
@@ -261,19 +272,23 @@ error:
 }
 
 
-// Sondehub v2 DB related code
 /*
         Update station data to the sondehub v2 DB
 */
 /* which_pos: 0=none, 1=fixed, 2=gps */
-void ConnSondehub::sondehub_station_update() {
+void ConnSondehub::updateStation( PosInfo *pi ) {
+    if (!sonde.config.sondehub.active)
+        return;
+    LOG_D(TAG, "updateStation\n");
+    sondehub_client_fsm();
+    // Currently, internal handler uses gpsInfo global variable instead of this pi
+
   struct st_sondehub *conf = &sonde.config.sondehub;
 #define STATION_DATA_LEN 300
   char data[STATION_DATA_LEN];
   char *w;
 
   sondehub_client_fsm();  // let's handle the connection state..
-  Serial.printf("client state is %d (%s)\n", shclient_state, state2str(shclient_state));
   if(shclient_state != SH_CONN_IDLE) return;  // Only if connected and idle can we send data...
 
   unsigned long time_now = millis();
@@ -290,13 +305,13 @@ void ConnSondehub::sondehub_station_update() {
   // Use 30sec update time in chase mode, 60 min in station mode.
   unsigned long update_time = (chase == SH_LOC_CHASE) ? SONDEHUB_MOBILE_STATION_UPDATE_TIME : SONDEHUB_STATION_UPDATE_TIME;
 
-  Serial.printf("tlu:%d  delta:%d upd=%d\nn", time_last_update, time_delta, update_time);
+  LOG_D(TAG, "tlu:%d  delta:%d upd=%d\n", time_last_update, time_delta, update_time);
   // If it is not yet time to send another update. do nothing....
   if(time_last_update != 0) {  // if 0, force update
       if ( (time_delta <= update_time) ) return;
   }
 
-  Serial.println("sondehub_station_update()");
+  LOG_D(TAG, "sondehub_station_update: send update\n");
   time_last_update = time_now;
 
   w = data;
@@ -360,14 +375,14 @@ void ConnSondehub::sondehub_station_update() {
       "Content-Length: %d\r\n\r\n%s",
       conf->host, strlen(data), data);
 
-  Serial.printf("PUT /listeners HTTP/1.1\n"
+  LOG_I(TAG, "PUT /listeners HTTP/1.1\n"
       "Host: %s\n"
       "accept: text/plain\n"
       "Content-Type: application/json\n"
       "Content-Length: %d\n\n%s",
       conf->host, strlen(data), data);
 
-  Serial.println("Waiting for response");
+  LOG_D(TAG, "Waiting for response");
   // Now we do this asychronously
   shclient_state = SH_CONN_WAITACK;
   rs_msg_len = 0;   // wait for new msg: 
@@ -379,61 +394,54 @@ void ConnSondehub::sondehub_station_update() {
         Update sonde data to the sondehub v2 DB
 */
 
-void ConnSondehub::sondehub_reply_handler() {
+#if 0
+void ConnSondehub::sondehub_reply_handler(const char *buf) {
   // sondehub handler for tasks to be done even if no data is to be sent:
   //   process response messages from sondehub
   //   request frequency list (if active)
+  //  (probably the request part needs to be moved elsewhere!  ==> TODO
 
-  if( shclient_state == SH_CONN_WAITIMPORTRES ) {   // we are waiting for a reply to a sondehub frequency import request
+  if(shclient_state == SH_CONN_WAITACK) {
+@@@@@
+      if(buf[i]=='\n') {
+          // We still wait for the beginning of the ACK
+          // so check if we got that. if yes, all good, continue reading :)
+          // If not, ignore everything we have read so far...
+          if(strncmp(rs_msg, "HTTP/1", 6)==0) { shclient_state = SH_CONN_IDLE; }
+          else rs_msg_len = 0;
+      }
+  } else if( shclient_state == SH_CONN_WAITIMPORTRES ) {   // we are waiting for a reply to a sondehub frequency import request
     // while we are waiting, we do nothing else with sondehub...
     int res = ShFreqImport::shImportHandleReply(shclient);
-    Serial.printf("ret: %d\n", res);
+    LOG_D(TAG, "shImportHandleReply: ret=%d\n", res);
     // res==0 means more data is expected, res==1 means complete reply received (or error)
     if (res == 1) {
       shclient_state = SH_CONN_IDLE;
       // shImport = 2; // finished
-      shImportInterval = sonde.config.sondehub.fiinterval * 60;
+      time_next_import = millis() + sonde.config.sondehub.fiinterval * 60 * 1000;
     }
     return;
   }
 
-#if 0
-  // send import requests if needed
-  if (sonde.config.sondehub.fiactive)  {
-    if (shImport == 2) {
-      Serial.printf("next sondehub frequncy import in %d seconds\n", shImportInterval);
-      shImportInterval --;
-      if (shImportInterval <= 0) {
-        shImport = 0;
-      }
-    }
-    else if (shImport == 0) {
-      if (shState == SH_CONN_APPENDING || shState == SH_CONN_WAITACK)
-        Serial.printf("Time to request next sondehub import.... but still busy with upload request");
-      else
-        sondehub_send_fimport();
-    }
-  }
-#endif
-
-#if 0
-  // also handle periodic station updates here...
-  // interval check moved to sondehub_station_update to avoid having to calculate distance in auto mode twice
-  if (sonde.config.sondehub.active) {
-    if (shState == SH_CONN_IDLE || shState == SH_DISCONNECTED ) {
-      // (do not set station update while a telemetry report is being sent
-      sondehub_station_update();
+/// TODO: Move this elsewhere, get timing right!
+#if 1
+  if( shclient_state == SH_CONN_IDLE ) {   // we are connected and idle, so fine to send frequency import request
+    // send import requests if needed
+    if (sonde.config.sondehub.fiactive)  {
+	unsigned long now = millis();
+        LOG_D(TAG, "next sondehub frequncy import in %d seconds\n", (time_next_import-now)/1000);
+	if(now > time_next_import) {
+          sondehub_send_fimport();
+        }
     }
   }
 #endif
 }
+#endif
 
 void ConnSondehub::sondehub_send_fimport() {
-#if 0
-  if (shState == SH_CONN_APPENDING || shState == SH_CONN_WAITACK) {
-    // Currently busy with SondeHub data upload
-    // So do nothing here.
-    // sond_fimport will be re-sent later, when shState becomes SH_CONN_IDLE
+  if (shclient_state != SH_CONN_IDLE) {
+    // Only send import if connection is idle (connected but no reply pending or partial request sent)
     return;
   }
   // It's time to run, so check prerequisites
@@ -445,14 +453,14 @@ void ConnSondehub::sondehub_send_fimport() {
 
   int maxdist = sonde.config.sondehub.fimaxdist;      // km
   int maxage = sonde.config.sondehub.fimaxage * 60;   // fimaxage is hours, shImportSendRequest uses minutes
-  int fiinterval = sonde.config.sondehub.fiinterval;
-  Serial.printf("shimp : %f %f %d %d %d\n", lat, lon, maxdist, maxage, shImportInterval);
-  if ( !isnan(lat) && !isnan(lon) && maxdist > 0 && maxage > 0 && fiinterval > 0 ) {
-    int res = ShFreqImport::shImportSendRequest(&shclient, lat, lon, maxdist, maxage);
-    if (res == 0) shImport = 1; // Request OK: wait for response
-    else shImport = 2;        // Request failed: wait interval, then retry
+  int time_to_next_import = time_next_import - millis();
+  LOG_D(TAG, "shimp : %f %f %d %d %d\n", lat, lon, maxdist, maxage, time_to_next_import/1000);
+  if ( !isnan(lat) && !isnan(lon) && maxdist > 0 && maxage > 0 && time_to_next_import < 0 ) {
+    int res = ShFreqImport::shImportSendRequest(shclient, lat, lon, maxdist, maxage);
+    if (res == 0) { 
+        shclient_state = SH_CONN_WAITIMPORTRES;
+    }
   }
-#endif
 }
 
 
@@ -461,13 +469,12 @@ void ConnSondehub::sondehub_send_fimport() {
 void ConnSondehub::sondehub_send_data(SondeInfo * s) {
   struct st_sondehub *conf = &sonde.config.sondehub;
 
-  Serial.println("sondehub_send_data()");
-  Serial.printf("shclient_state = %d\n", shclient_state);
+  LOG_D(TAG, "sondehub_send_data: shclient_state = %d\n", shclient_state);
 
   sondehub_client_fsm();
   // Only send data when in idle or appending state....
   if(shclient_state != SH_CONN_IDLE && shclient_state != SH_CONN_APPENDING) { 
-    Serial.println("Not in right state for sending next request...");
+    LOG_W(TAG, "Not in right state for sending next request...\n");
     return;
   }
 
@@ -496,7 +503,7 @@ void ConnSondehub::sondehub_send_data(SondeInfo * s) {
   time(&now);
   gmtime_r(&now, &timeinfo);
   if (timeinfo.tm_year <= (2016 - 1900)) {
-    Serial.println("Failed to obtain time");
+    LOG_E(TAG, "Failed to obtain time\n");
     return;
   }
 
@@ -508,7 +515,7 @@ void ConnSondehub::sondehub_send_data(SondeInfo * s) {
   if ( realtype != STYPE_M20 && (int)s->d.sats < 4) return;     // If not enough sats don't send to SondeHub
 
  if ( abs(now - (time_t)s->d.time) > (3600 * SONDEHUB_TIME_THRESHOLD) ) {
-    Serial.printf("Sonde time %d too far from current UTC time %ld", s->d.time, now);
+    LOG_E(TAG, "Sonde time %d too far from current UTC time %ld", s->d.time, now);
     return;
   }
 
@@ -674,20 +681,18 @@ static const char *MONTHS[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", 
 
 void ConnSondehub::sondehub_send_header(SondeInfo * s, struct tm * now) {
   struct st_sondehub *conf = &sonde.config.sondehub;
-  Serial.print("PUT /sondes/telemetry HTTP/1.1\r\n"
-               "Host: ");
-  Serial.println(conf->host);
-  Serial.print("accept: text/plain\r\n"
-               "Content-Type: application/json\r\n"
-               "Transfer-Encoding: chunked\r\n");
-
   dprintf(shclient, "PUT /sondes/telemetry HTTP/1.1\r\n"
                 "Host: %s\n"
                 "accept: text/plain\r\n"
                 "Content-Type: application/json\r\n"
                 "Transfer-Encoding: chunked\r\n", conf->host);
+  LOG_D(TAG, "PUT /sondes/telemetry HTTP/1.1\r\n"
+                "Host: %s\n"
+                "accept: text/plain\r\n"
+                "Content-Type: application/json\r\n"
+                "Transfer-Encoding: chunked\r\n", conf->host);
   if (now) {
-    Serial.printf("Date: %s, %02d %s %04d %02d:%02d:%02d GMT\r\n",
+    LOG_D(TAG,        "Date: %s, %02d %s %04d %02d:%02d:%02d GMT\r\n",
                   DAYS[now->tm_wday], now->tm_mday, MONTHS[now->tm_mon], now->tm_year + 1900,
                   now->tm_hour, now->tm_min, now->tm_sec);
     dprintf(shclient, "Date: %s, %02d %s %04d %02d:%02d:%02d GMT\r\n",
@@ -703,15 +708,14 @@ void ConnSondehub::sondehub_send_next(SondeInfo * s, char *chunk, int chunklen, 
   write(shclient, chunk, chunklen);
   write(shclient, "\r\n", 2);
 
-  Serial.printf("%x\r\n", chunklen + 1);
-  Serial.write((const uint8_t *)(first ? "[" : ","), 1);
+  LOG_D(TAG, "%x\r\n%c", chunklen + 1, first ? "[" : ",");
   Serial.write((const uint8_t *)chunk, chunklen);
-  Serial.print("\r\n");
+  LOG_D(TAG, "\r\n");
 }
 void ConnSondehub::sondehub_send_last() {
   // last chunk. just the closing "]" of the json request
   dprintf(shclient, "1\r\n]\r\n0\r\n\r\n");
-  Serial.printf("1\r\n]\r\n0\r\n\r\n");
+  LOG_D(TAG, "1\r\n]\r\n0\r\n\r\n");
 }
 
 

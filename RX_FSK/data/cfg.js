@@ -3,7 +3,7 @@ var cfgs = [
 [ "wifi", "Wifi mode (0=off, 1=client, 2=AP, 3=client or AP, 4=client-noscan)" ],
 [ "mdnsname", "Network mDNS name"],
 [ "ephftp", "FTP server for ephemeris data (RS92 decoder)"],
-[ "debug", "Debug mode (0/1)" ],
+[ "debug", "Debug level (0=err/1=warn/2=info/3=all;+10=color)" ],
 [ "maxsonde", "Maximum number of QRG entries (must be &leq; 50)" ],
 [ "rxlat", "Receiver fixed latitude"],
 [ "rxlon", "Receiver fixed longitude"],

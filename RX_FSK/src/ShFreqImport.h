@@ -14,7 +14,7 @@ public:
 
 	// return 0: ok, need more data; 1: finished/failure, close connection
 	// Asynchronous I/O. Handle data if available
-	static int shImportHandleReply(int client);  
+	static int shImportHandleReply(const char *buf, int len);
 
 private:
 	static int stringToStype(const char *type);
