@@ -18,6 +18,8 @@ It also supports feeding data to external applications using WiFi (NOT bluetooth
 Please consult the Wiki at https://github.com/dl9rdz/rdz_ttgo_sonde/wiki/Supported-boards
 for details on supported boards, and additional setup instructions.
 
+NOTE: Older boards with 26 MHz crystal (TTGO LoRa32 v1, Heltec v1/v2) are not supported by newer dev/main firmware images.
+
 
 ### Radiosonde Support Matrix
 
