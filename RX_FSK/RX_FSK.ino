@@ -30,7 +30,7 @@
 #include "src/geteph.h"
 #include "src/rs92gps.h"
 #endif
-// Not needed here, included by connector   #include "src/aprs.h"
+
 #include "src/ShFreqImport.h"
 #include "src/RS41.h"
 #include "src/DFM.h"
@@ -182,7 +182,7 @@ int readLine(Stream &stream, char *buffer, int maxlen) {
 
 // Replaces placeholder with LED state value
 String processor(const String& var) {
-  Serial.println(var);
+  LOG_D(TAG, "%s\n", var.c_str());
   if (var == "MAPCENTER") {
 #if 0
     double lat, lon;
@@ -266,15 +266,15 @@ char message[10240 * 3 - 2048]; //needs to be large enough for all forms (not ch
 void setupChannelList() {
   File file = LittleFS.open("/qrg.txt", "r");
   if (!file) {
-    Serial.println("There was an error opening the file '/qrg.txt' for reading");
+    LOG_E(TAG, "There was an error opening the file '/qrg.txt' for reading");
     return;
   }
   int i = 0;
   char launchsite[17] = "                ";
   sonde.clearSonde();
-  Serial.println("Reading channel config:");
+  LOG_I(TAG, "Reading qrg.txt:");
   while (file.available()) {
-    String line = readLine(file);   //file.readStringUntil('\n');
+    String line = readLine(file);
     String sitename;
     if (line[0] == '#') continue;
     char *space = strchr(line.c_str(), ' ');
@@ -305,7 +305,7 @@ void setupChannelList() {
       memset(launchsite, ' ', 16);
       strncpy(launchsite, space + 5, 16);
       if (sonde.config.debug == 1) {
-        Serial.printf("Add %f - sondetype: %d (on/off: %d) - site #%d - name: %s\n ", freq, type, active, i, launchsite);
+        LOG_D(TAG, "Add %f - sondetype: %d (on/off: %d) - site #%d - name: %s\n ", freq, type, active, i, launchsite);
       }
     }
     sonde.addSonde(freq, type, active, launchsite);
@@ -352,7 +352,7 @@ const char *createQRGForm() {
   //</div><div class=\"footer\"><input type=\"submit\" class=\"update\" value=\"Update\"/>");
   HTMLSAVEBUTTON(ptr);
   HTMLBODYEND(ptr);
-  Serial.printf("QRG form: size=%d bytes\n", strlen(message));
+  LOG_D(TAG, "QRG form: size=%d bytes\n", strlen(message));
   return message;
 }
 
@@ -361,7 +361,7 @@ const char *handleQRGPost(AsyncWebServerRequest * request) {
   // parameters: a_i, f_1, t_i  (active/frequency/type)
   File file = LittleFS.open("/qrg.txt", "w");
   if (!file) {
-    Serial.println("Error while opening '/qrg.txt' for writing");
+    LOG_E(TAG, "Error while opening '/qrg.txt' for writing");
     return "Error while opening '/qrg.txt' for writing";
   }
   Serial.println("Handling post request");
@@ -390,13 +390,13 @@ const char *handleQRGPost(AsyncWebServerRequest * request) {
     const char *tstr = tstring.c_str();
     const char *sstr = sstring.c_str();
     if (*tstr == '6' || *tstr == '9') tstr = "D";
-    Serial.printf("Processing a=%s, f=%s, t=%s, site=%s\n", active ? "YES" : "NO", fstr, tstr, sstr);
+    LOG_D(TAG, "Processing a=%s, f=%s, t=%s, site=%s\n", active ? "YES" : "NO", fstr, tstr, sstr);
     char typech = tstr[0];
     file.printf("%3.3f %c %c %s\n", atof(fstr), typech, active ? '+' : '-', sstr);
   }
   file.close();
 
-  Serial.println("Channel setup finished\n");
+  LOG_D(TAG, "Channel setup finished\n");
   setupChannelList();
   return "";
 }
@@ -411,12 +411,31 @@ struct {
   String pw;
 } networks[MAX_WIFI];
 
+
+// used by improv wifi
+int updateWiFi(String ssid, String pw) {
+        networks[1].id = ssid;
+        networks[1].pw = pw;
+	if(nNetworks<2) nNetworks = 2;
+        File file = LittleFS.open("/networks.txt", "w");
+        if(!file) return -1;
+        for(int i=0; i<nNetworks; i++) {
+                if(networks[i].id && networks[i].pw) {
+                        file.printf("%s\n%s\n", networks[i].id, networks[i].pw);
+                }
+        }
+        file.close(); 
+	return 0;
+}       
+
+
+
 // FIXME: For now, we don't uspport wifi networks that contain newline or null characters
 // ... would require a more sophisicated file format (currently one line SSID; one line Password
 void setupWifiList() {
   File file = LittleFS.open("/networks.txt", "r");
   if (!file) {
-    Serial.println("There was an error opening the file '/networks.txt' for reading");
+    LOG_E(TAG, "There was an error opening the file '/networks.txt' for reading");
     networks[0].id = "RDZsonde";
     networks[0].pw = "RDZsonde";
     return;
@@ -434,9 +453,7 @@ void setupWifiList() {
   LOG_I(TAG, "%d networks in networks.txt\n", i);
   // Serial.print(i); Serial.println(" networks in networks.txt\n");
   for (int j = 0; j < i; j++) {
-    Serial.print(networks[j].id);
-    Serial.print(": ");
-    Serial.println(networks[j].pw);
+    LOG_I(TAG, "%s: %s\n", networks[j].id, networks[j].pw);
   }
 }
 
@@ -476,7 +493,7 @@ const char *createWIFIForm() {
   //</div><div class=\"footer\"><input type=\"submit\" class=\"update\" value=\"Update\"/>");
   HTMLSAVEBUTTON(ptr);
   HTMLBODYEND(ptr);
-  Serial.printf("WIFI form: size=%d bytes\n", strlen(message));
+  LOG_D(TAG, "WIFI form: size=%d bytes\n", strlen(message));
   return message;
 }
 
@@ -486,11 +503,11 @@ const char *handleWIFIPost(AsyncWebServerRequest * request) {
 #if 1
   File f = LittleFS.open("/networks.txt", "w");
   if (!f) {
-    Serial.println("Error while opening '/networks.txt' for writing");
+    LOG_E(TAG, "Error while opening '/networks.txt' for writing");
     return "Error while opening '/networks.txt' for writing";
   }
 #endif
-  Serial.println("Handling post request");
+  LOG_D(TAG, "Handling post request");
 #if 0
   int params = request->params();
   for (int i = 0; i < params; i++) {
@@ -510,7 +527,7 @@ const char *handleWIFIPost(AsyncWebServerRequest * request) {
     const char *sstr = sstring.c_str();
     const char *pstr = pstring.c_str();
     if (strlen(sstr) == 0) continue;
-    Serial.printf("Processing S=%s, P=%s\n", sstr, pstr);
+    LOG_D(TAG, "Processing S=%s, P=%s\n", sstr, pstr);
     f.printf("%s\n%s\n", sstr, pstr);
   }
   f.close();
@@ -566,7 +583,7 @@ const char *createStatusForm() {
   strcat(ptr, "</span>");
 
   HTMLBODYEND(ptr);
-  Serial.printf("Status form: size=%d bytes\n", strlen(message));
+  LOG_D(TAG, "Status form: size=%d bytes\n", strlen(message));
   return message;
 }
 
@@ -610,7 +627,7 @@ const char *createLiveJson() {
 void setupConfigData() {
   File file = LittleFS.open("/config.txt", "r");
   if (!file) {
-    Serial.println("There was an error opening the file '/config.txt' for reading");
+    LOG_E(TAG, "There was an error opening the file '/config.txt' for reading");
     return;
   }
   while (file.available()) {
@@ -765,7 +782,7 @@ const char *createConfigForm() {
       case -2:
       case 0:
         sprintf(ptr + strlen(ptr), "%d", *(int *)config_list[i].data);
-        Serial.printf("Config for %s is %d\n", config_list[i].name, *(int *)config_list[i].data);
+        LOG_D(TAG, "Config for %s is %d\n", config_list[i].name, *(int *)config_list[i].data);
         break;
       case -6: // list
         {
@@ -794,22 +811,22 @@ const char *createConfigForm() {
   strcat(ptr, "<script>footer()</script>");
   HTMLSAVEBUTTON(ptr);
   HTMLBODYEND(ptr);
-  Serial.printf("Config form: size=%d bytes\n", strlen(message));
+  LOG_D(TAG, "Config form: size=%d bytes\n", strlen(message));
   return message;
 }
 
 
 const char *handleConfigPost(AsyncWebServerRequest * request) {
   // parameters: a_i, f_1, t_i  (active/frequency/type)
-  Serial.println("Handling post request");
+  LOG_D(TAG, "Handling config post request");
 #if 1
   File f = LittleFS.open("/config.txt", "w");
   if (!f) {
-    Serial.println("Error while opening '/config.txt' for writing");
+    LOG_E(TAG, "Error while opening '/config.txt' for writing");
     return "Error while opening '/config.txt' for writing";
   }
 #endif
-  Serial.println("File open for writing.");
+  LOG_D(TAG, "File open for writing.");
   int params = request->params();
 #if 0
   for (int i = 0; i < params; i++) {
@@ -833,16 +850,16 @@ const char *handleConfigPost(AsyncWebServerRequest * request) {
         strvalue = String(i);
       }
     }
-    Serial.printf("Processing %s=%s\n", label, strvalue.c_str());
+    LOG_D(TAG, "Processing %s=%s\n", label, strvalue.c_str());
     //int wlen = f.printf("%s=%s\n", config_list[idx].name, strvalue.c_str());
     int wlen = f.printf("%s=%s\n", label, strvalue.c_str());
-    Serial.printf("Written bytes: %d\n", wlen);
+    LOG_D(TAG, "Written bytes: %d\n", wlen);
   }
-  Serial.printf("Flushing file\n");
+  LOG_D(TAG, "Flushing file\n");
   f.flush();
-  Serial.printf("Closing file\n");
+  LOG_D(TAG, "Closing file\n");
   f.close();
-  Serial.printf("Re-reading file file\n");
+  LOG_D(TAG, "Re-reading file file\n");
   setupConfigData();
   if (!gpsPos.valid) fixedToPosInfo();
   // TODO: Check if this is better done elsewhere?
@@ -878,13 +895,13 @@ const char *createControlForm() {
   strcat(ptr, version_id);
   strcat(ptr, "</span>");
   HTMLBODYEND(ptr);
-  Serial.printf("Control form: size=%d bytes\n", strlen(message));
+  LOG_I(TAG, "Control form: size=%d bytes\n", strlen(message));
   return message;
 }
 
 
 const char *handleControlPost(AsyncWebServerRequest * request) {
-  Serial.println("Handling post request");
+  LOG_D(TAG, "Handling control post request");
   int params = request->params();
   for (int i = 0; i < params; i++) {
     String param = request->getParam(i)->name();
@@ -932,7 +949,7 @@ const char *handleControlPost(AsyncWebServerRequest * request) {
 void handleUpload(AsyncWebServerRequest * request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
   static File file;
   if (!index) {
-    Serial.printf("UploadStart: %s\n", filename.c_str());
+    LOG_D(TAG, "UploadStart: %s\n", filename.c_str());
     file = LittleFS.open("/" + filename, "w");
     if (!file) {
       Serial.println("There was an error opening the file '/config.txt' for reading");
@@ -943,14 +960,14 @@ void handleUpload(AsyncWebServerRequest * request, String filename, size_t index
     file.write(data[i]);
   }
   if (final) {
-    Serial.printf("UploadEnd: %s, %u B\n", filename.c_str(), index + len);
+    LOG_D(TAG, "UploadEnd: %s, %u B\n", filename.c_str(), index + len);
     file.close();
   }
 }
 
 
 int streamEditForm(int &state, File & file, String filename, char *buffer, size_t maxlen, size_t index) {
-  Serial.printf("streamEdit: state=%d  max:%d idx:%d\n", state, maxlen, index);
+  LOG_D(TAG, "streamEdit: state=%d  max:%d idx:%d\n", state, maxlen, index);
   int i = 0;
   switch (state) {
     case 0: // header
@@ -972,7 +989,7 @@ int streamEditForm(int &state, File & file, String filename, char *buffer, size_
           return strlen(buffer);
         }
         state++;
-        Serial.printf("Wrote %d bytes. Header finished", i);
+        LOG_D(TAG, "Wrote %d bytes. Header finished", i);
         return i;
         break;
       }
@@ -1019,7 +1036,7 @@ const char *createEditForm(String filename) {
     strcat(ptr, line.c_str()); strcat(ptr, "\n");
   }
   strcat(ptr, "</textarea><input type=\"submit\" value=\"Save\"></input></form></body></html>");
-  Serial.printf("Edit form: size=%d bytes\n", strlen(message));
+  LOG_D(TAG, "Edit form: size=%d bytes\n", strlen(message));
   return message;
 }
 
@@ -1027,7 +1044,7 @@ const char *createEditForm(String filename) {
 const char *handleEditPost(AsyncWebServerRequest * request) {
   Serial.println("Handling post request");
   int params = request->params();
-  Serial.printf("Post:, %d params\n", params);
+  LOG_D(TAG, "Post:, %d params\n", params);
   for (int i = 0; i < params; i++) {
     AsyncWebParameter* p = request->getParam(i);
     String name = p->name();
@@ -1039,22 +1056,22 @@ const char *handleEditPost(AsyncWebServerRequest * request) {
       value = String("NULL");
     }
     if (p->isFile()) {
-      Serial.printf("_FILE[%s]: %s, size: %u\n", name.c_str(), value.c_str(), p->size());
+      LOG_D(TAG, "_FILE[%s]: %s, size: %u\n", name.c_str(), value.c_str(), p->size());
     } else if (p->isPost()) {
-      Serial.printf("_POST[%s]: %s\n", name.c_str(), value.c_str());
+      LOG_D(TAG, "_POST[%s]: %s\n", name.c_str(), value.c_str());
     } else {
-      Serial.printf("_GET[%s]: %s\n", name.c_str(), value.c_str());
+      LOG_D(TAG, "_GET[%s]: %s\n", name.c_str(), value.c_str());
     }
   }
 
   AsyncWebParameter *filep = request->getParam("file");
   if (!filep) return NULL;
   String filename = filep->value();
-  Serial.printf("Writing file <%s>\n", filename.c_str());
+  LOG_D(TAG, "Writing file <%s>\n", filename.c_str());
   AsyncWebParameter *textp = request->getParam("text", true);
   if (!textp) return NULL;
-  Serial.printf("Parameter size is %d\n", textp->size());
-  Serial.printf("Multipart: %d  contentlen=%d  \n",
+  LOG_D(TAG, "Parameter size is %d\n", textp->size());
+  LOG_D(TAG, "Multipart: %d  contentlen=%d  \n",
                 request->multipart(), request->contentLength());
   String content = textp->value();
   if (content.length() == 0) {
@@ -1066,10 +1083,10 @@ const char *handleEditPost(AsyncWebServerRequest * request) {
     Serial.println("There was an error opening the file '/" + filename + "'for writing");
     return "";
   }
-  Serial.printf("File is open for writing, content is %d bytes\n", content.length());
+  LOG_D(TAG, "File is open for writing, content is %d bytes\n", content.length());
   int len = file.print(content);
   file.close();
-  Serial.printf("Written: %d bytes\n", len);
+  LOG_D(TAG, "Written: %d bytes\n", len);
   if (strncmp(filename.c_str(), "screens", 7) == 0) {
     // screens update => reload
     forceReloadScreenConfig = true;
@@ -1091,7 +1108,7 @@ const char *createUpdateForm(boolean run) {
     strcat(ptr, "<br><p>Note: If suffix is the same, update should work fully. If the number is different, update contains changes in the file system. A full re-flash is required to get all new features, but the update should not break anything. If the letter is different, a full re-flash is mandatory, update will not work</p>");
   }
   strcat(ptr, "</form></body></html>");
-  Serial.printf("Update form: size=%d bytes\n", strlen(message));
+  LOG_D(TAG, "Update form: size=%d bytes\n", strlen(message));
   return message;
 }
 
@@ -1110,7 +1127,7 @@ const char *handleUpdatePost(AsyncWebServerRequest * request) {
       updatePrefix = updatePrefixM;
     }
   }
-  Serial.printf("Updating: %supdate.ino.bin\n", updatePrefix);
+  LOG_I(TAG, "Updating: %supdate.ino.bin\n", updatePrefix);
   enterMode(ST_UPDATE);
   return "";
 }
@@ -1280,12 +1297,12 @@ void SetupAsyncServer() {
   server.on("/sd/data.csv", HTTP_GET, [](AsyncWebServerRequest *request) {
      Serial.println("Opening SD card file\n");
      const File SDFile = SD.open("/data.csv", FILE_READ);
-     if(SDFile) { Serial.printf("SD file opened\n"); }
-     else { Serial.printf("SD file does not exist"); request->send(404); return; }
+     if(SDFile) { LOG_I(TAG, "SD file opened\n"); }
+     else { LOG_I(TAG, "SD file does not exist"); request->send(404); return; }
      AsyncWebServerResponse *response = request->beginChunkedResponse("text/plain", [SDFile](uint8_t *buf, size_t maxLen, size_t index) -> size_t {
        File sdlf = SDFile;
        // if(maxLen>1024) maxLen=1024;
-       Serial.printf("[HTTP]\t[%d]\tINDEX [%d]\tBUFFER_MAX_LENGHT [%d]\r\n", index, sdlf.size(), maxLen);
+       LOG_D(TAG, "[HTTP]\t[%d]\tINDEX [%d]\tBUFFER_MAX_LENGHT [%d]\r\n", index, sdlf.size(), maxLen);
        return sdlf.read(buf, maxLen);
      });
      request->send(response);
@@ -1295,7 +1312,7 @@ void SetupAsyncServer() {
     DIR *dir = opendir("/sd/");
     struct dirent *dent;
     AsyncWebServerResponse *response = request->beginChunkedResponse("application/json", [dir, dent](uint8_t *buf, size_t maxLen, size_t index) mutable -> size_t {
-      Serial.printf("[HTTP]\tINDEX [%d]\tBUFFER_MAX_LENGHT [%d]\r\n", index, maxLen);
+      LOG_D(TAG, "[HTTP]\tINDEX [%d]\tBUFFER_MAX_LENGHT [%d]\r\n", index, maxLen);
       if(index==0) {
         if(!dir) {
 		dent = NULL;
@@ -1338,7 +1355,7 @@ void SetupAsyncServer() {
     File file = SPIFFS.open("/" + filename, "r");
     int state = 0;
     request->send("text/html", 0, [state, file, filename](uint8_t *buffer, size_t maxLen, size_t index) mutable -> size_t  {
-      Serial.printf("******* send callback: %d %d %d\n", state, maxLen, index);
+      LOG_D(TAG, "******* send callback: %d %d %d\n", state, maxLen, index);
       return streamEditForm(state, file, filename, (char *)buffer, maxLen, index);
     });
   });
@@ -1358,7 +1375,7 @@ void SetupAsyncServer() {
   },
   NULL,
   [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
-    Serial.printf("post data: index=%d len=%d total=%d\n", index, len, total);
+    LOG_D(TAG, "post data: index=%d len=%d total=%d\n", index, len, total);
   });
 
   // Route to load style.css file
@@ -1411,10 +1428,10 @@ void SetupAsyncServer() {
         // with platform-espressif32 (some TCP segments simply get lost before being sent, so reply header and parts of data is missing)
         // This happens with concurrent requests, notably if a browser fetches rdz.js and cfg.js concurrently for config.html
         // With the cache, rdz.js is likely already in the cache...0
-        Serial.printf("URL is %s\n", url.c_str());
+        LOG_D(TAG, "URL is %s\n", url.c_str());
 	const char *type = "text/html";
         if(url.endsWith(".js")) type="text/javascript";
-        Serial.printf("Responding with type %s (url %s)\n", type, url.c_str());
+        LOG_D(TAG, "Responding with type %s (url %s)\n", type, url.c_str());
         AsyncWebServerResponse *response = request->beginResponse(SPIFFS, url, type);
         if(response) {
           response->addHeader("Cache-Control", "max-age=900"); 
@@ -1433,10 +1450,10 @@ void SetupAsyncServer() {
 int fetchWifiIndex(const char *id) {
   for (int i = 0; i < nNetworks; i++) {
     if (strcmp(id, networks[i].id.c_str()) == 0) {
-      Serial.printf("Match for %s at %d\n", id, i);
+      LOG_D(TAG, "Match for %s at %d\n", id, i);
       return i;
     }
-    //Serial.printf("No match: '%s' vs '%s'\n", id, networks[i].id.c_str());
+    //LOG_D(TAG, "No match: '%s' vs '%s'\n", id, networks[i].id.c_str());
     const char *cfgid = networks[i].id.c_str();
     int len = strlen(cfgid);
     if (strlen(id) > len) len = strlen(id);
@@ -1522,11 +1539,11 @@ void initTouch() {
 
   if ( IS_TOUCH(sonde.config.button_pin) ) {
     touchAttachInterrupt(sonde.config.button_pin & 0x7f, touchISR, sonde.config.touch_thresh);
-    Serial.printf("Initializing touch 1 on pin %d\n", sonde.config.button_pin & 0x7f);
+    LOG_I(TAG, "Initializing touch 1 on pin %d\n", sonde.config.button_pin & 0x7f);
   }
   if ( IS_TOUCH(sonde.config.button2_pin) ) {
     touchAttachInterrupt(sonde.config.button2_pin & 0x7f, touchISR2, sonde.config.touch_thresh);
-    Serial.printf("Initializing touch 2 on pin %d\n", sonde.config.button2_pin & 0x7f);
+    LOG_I(TAG, "Initializing touch 2 on pin %d\n", sonde.config.button2_pin & 0x7f);
   }
 }
 
@@ -1553,12 +1570,12 @@ void sx1278Task(void *parameter) {
   while (1) {
     if (rxtask.activate >= 128) {
       // activating sx1278 background task...
-      Serial.printf("RXtask: start DECODER for sonde %d (was %s)\n", rxtask.activate & 0x7f, getStateStr(rxtask.mainState));
+      LOG_I(TAG, "RXtask: start DECODER for sonde %d (was %s)\n", rxtask.activate & 0x7f, getStateStr(rxtask.mainState));
       rxtask.mainState = ST_DECODER;
       rxtask.currentSonde = rxtask.activate & 0x7F;
       sonde.setup();
     } else if (rxtask.activate != -1) {
-      Serial.printf("RXtask: start %s (was %s)\n", getStateStr(rxtask.activate), getStateStr(rxtask.mainState));
+      LOG_I(TAG, "RXtask: start %s (was %s)\n", getStateStr(rxtask.activate), getStateStr(rxtask.mainState));
       rxtask.mainState = rxtask.activate;
     }
     rxtask.activate = -1;
@@ -1597,7 +1614,7 @@ static void IRAM_ATTR touchISR2() {
 static void checkTouchButton(Button & button) {
   if (button.isTouched) {
     int tmp = touchRead(button.pin & 0x7f);
-    //Serial.printf("touch read %d: value is %d\n", button.pin & 0x7f, tmp);
+    //LOG_D(TAG, "touch read %d: value is %d\n", button.pin & 0x7f, tmp);
     if (tmp > sonde.config.touch_thresh + 5) {
       button.isTouched = false;
       unsigned long elapsed = my_millis() - button.keydownTime;
@@ -1625,11 +1642,11 @@ void ledOffCallback() {
 void flashLed(int ms) {
   if (sonde.config.led_pout >= 0) {
     if(t_muted != -1) {
-      Serial.printf("Muted at %d\n", t_muted);
+      LOG_D(TAG, "Muted at %d\n", t_muted);
       // t_muted was set by key press to mute LED / buzzer
       if(millis()-t_muted < sonde.config.b2mute * 60000L) return;
       else t_muted = -1;
-      Serial.printf("Unmuted\n");
+      LOG_D(TAG, "Unmuted\n");
     }
     Serial.println("Not muted");
     digitalWrite(sonde.config.led_pout, HIGH);
@@ -1719,8 +1736,8 @@ int getKeyPress() {
   button1.pressed = KP_NONE;
 #if 0
   int x = digitalRead(button1.pin);
-  Serial.printf("Debug: bdd1=%ld, bdd2=%ld\n", bdd1, bdd2);
-  Serial.printf("button1 press (dbl:%d) (now:%d): %d at %ld (%d)\n", button1.doublepress, x, p, button1.keydownTime, button1.numberKeyPresses);
+  LOG_D(TAG, "Debug: bdd1=%ld, bdd2=%ld\n", bdd1, bdd2);
+  LOG_D(TAG, "button1 press (dbl:%d) (now:%d): %d at %ld (%d)\n", button1.doublepress, x, p, button1.keydownTime, button1.numberKeyPresses);
 #endif
   return p;
 }
@@ -1745,7 +1762,7 @@ int getKey2Press() {
   // TODO: Should be atomic
   KeyPress p = button2.pressed;
   button2.pressed = KP_NONE;
-  //Serial.printf("button2 press: %d at %ld (%d)\n", p, button2.keydownTime, button2.numberKeyPresses);
+  //LOG_D(TAG, "button2 press: %d at %ld (%d)\n", p, button2.keydownTime, button2.numberKeyPresses);
   return p;
 }
 
@@ -1755,14 +1772,14 @@ int getKeyPressEvent() {
     p = getKey2Press();
     if (p == KP_NONE)
       return EVT_NONE;
-    Serial.printf("Key 2 was pressed [%d]\n", p + 4);
+    LOG_D(TAG, "Key 2 was pressed [%d]\n", p + 4);
     // maybe not the best place, but easy to do: check for B2 medium keypress to mute LED
     if(p == KP_MID && sonde.config.b2mute > 0) {
        if(t_muted==-1) t_muted = millis(); else t_muted = -1;
     }
     return p + 4;
   }
-  Serial.printf("Key 1 was pressed [%d]\n", p);
+  LOG_D(TAG, "Key 1 was pressed [%d]\n", p);
   return p;  /* map KP_x to EVT_KEY1_x / EVT_KEY2_x*/
 }
 
@@ -1828,9 +1845,10 @@ void setup()
 
   // Open serial communications and wait for port to open:
   Serial.begin(115200);
+
   for (int i = 0; i < 39; i++) {
     int v = gpio_get_level((gpio_num_t)i);
-    Serial.printf("%d:%d ", i, v);
+    LOG_D(TAG, "%d:%d ", i, v);
   }
   LOG_I(TAG, "sizeof long is %d\n", sizeof(long));
 
@@ -1844,7 +1862,7 @@ void setup()
   xSemaphoreGive(axpSemaphore);
 
   for (int i = 0; i < 39; i++) {
-    Serial.printf("%d:%d ", i, initlevels[i]);
+    LOG_D(TAG, "%d:%d ", i, initlevels[i]);
   }
   Serial.println(" (before setup)");
   sonde.defaultConfig();  // including autoconfiguration
@@ -1925,12 +1943,12 @@ void setup()
   // Handle button press
   if ( (button1.pin & 0x80) == 0) {
     attachInterrupt( button1.pin, buttonISR, CHANGE);
-    Serial.printf("button1.pin is %d, attaching interrupt\n", button1.pin);
+    LOG_D(TAG, "button1.pin is %d, attaching interrupt\n", button1.pin);
   }
   // Handle button press
   if ( (button2.pin & 0x80) == 0) {
     attachInterrupt( button2.pin, button2ISR, CHANGE);
-    Serial.printf("button2.pin is %d, attaching interrupt\n", button2.pin);
+    LOG_D(TAG, "button2.pin is %d, attaching interrupt\n", button2.pin);
   }
   initTouch();
 
@@ -1943,50 +1961,10 @@ void setup()
   sonde.clearDisplay();
 
   setupWifiList();
-  Serial.printf("before disp.initFromFile... layouts is %p\n", disp.layouts);
+  LOG_D(TAG, "before disp.initFromFile... layouts is %p\n", disp.layouts);
   disp.initFromFile(sonde.config.screenfile);
-  Serial.printf("disp.initFromFile... layouts is %p\n", disp.layouts);
+  LOG_D(TAG, "disp.initFromFile... layouts is %p\n", disp.layouts);
 
-
-  // == show initial values from config.txt ========================= //
-  if (sonde.config.debug == 1) {
-    disp.rdis->setFont(FONT_SMALL);
-    disp.rdis->drawString(0, 0, "Config:");
-
-    delay(500);
-    itoa(sonde.config.oled_sda, buf, 10);
-    disp.rdis->drawString(0, 1, " SDA:");
-    disp.rdis->drawString(6, 1, buf);
-
-    delay(500);
-    itoa(sonde.config.oled_scl, buf, 10);
-    disp.rdis->drawString(0, 2, " SCL:");
-    disp.rdis->drawString(6, 2, buf);
-
-    delay(500);
-    itoa(sonde.config.oled_rst, buf, 10);
-    disp.rdis->drawString(0, 3, " RST:");
-    disp.rdis->drawString(6, 3, buf);
-
-    delay(1000);
-    itoa(sonde.config.led_pout, buf, 10);
-    disp.rdis->drawString(0, 4, " LED:");
-    disp.rdis->drawString(6, 4, buf);
-
-    delay(500);
-    itoa(sonde.config.spectrum, buf, 10);
-    disp.rdis->drawString(0, 5, " SPEC:");
-    disp.rdis->drawString(6, 5, buf);
-
-    delay(500);
-    itoa(sonde.config.maxsonde, buf, 10);
-    disp.rdis->drawString(0, 6, " MAX:");
-    disp.rdis->drawString(6, 6, buf);
-
-    delay(5000);
-    sonde.clearDisplay();
-  }
-  // == show initial values from config.txt ========================= //
 
 #if 1
 
@@ -2091,7 +2069,7 @@ void setup()
 }
 
 void enterMode(int mode) {
-  Serial.printf("enterMode(%d)\n", mode);
+  LOG_D(TAG, "enterMode(%d)\n", mode);
   // Backround RX task should only be active in mode ST_DECODER for now
   // (future changes might use RX background task for spectrum display as well)
   if (mode != ST_DECODER) {
@@ -2147,7 +2125,7 @@ void loopDecoder() {
   // sonde knows the current type and frequency, and delegates to the right decoder
   uint16_t res = sonde.waitRXcomplete();
   int action;
-  //Serial.printf("waitRX result is %x\n", (int)res);
+  //LOG_D(TAG, "waitRX result is %x\n", (int)res);
   action = (int)(res >> 8);
   // TODO: update displayed sonde?
 
@@ -2164,7 +2142,7 @@ void loopDecoder() {
 
   if (action != ACT_NONE) {
     int newact = sonde.updateState(action);
-    Serial.printf("MAIN: loopDecoder: action %02x (%s) => %d  [current: main=%d, rxtask=%d]\n", action, action2text(action), newact, sonde.currentSonde, rxtask.currentSonde);
+    LOG_I(TAG, "loopDecoder: action %02x (%s) => %d  [current: main=%d, rxtask=%d]\n", action, action2text(action), newact, sonde.currentSonde, rxtask.currentSonde);
     action = newact;
     if (action != 255) {
       if (action == ACT_DISPLAY_SPECTRUM) {
@@ -2292,7 +2270,7 @@ void loopDecoder() {
     }
     //Serial.println("Writing rdzclient OK");
   }
-  Serial.print("MAIN: updateDisplay started\n");
+  LOG_D(TAG, "updateDisplay started\n");
   sonde.dispsavectlOFF( (res & 0xff) == 0 );  // handle screen saver (disp auto off)
   if (forceReloadScreenConfig) {
     disp.initFromFile(sonde.config.screenfile);
@@ -2301,11 +2279,11 @@ void loopDecoder() {
   }
   int t = millis();
   sonde.updateDisplay();
-  Serial.printf("MAIN: updateDisplay done (after %d ms)\n", (int)(millis() - t));
+  LOG_D(TAG, "updateDisplay done (after %d ms)\n", (int)(millis() - t));
 }
 
 void setCurrentDisplay(int value) {
-  Serial.printf("setCurrentDisplay: setting index %d, entry %d\n", value, sonde.config.display[value]);
+  LOG_D(TAG, "setCurrentDisplay: setting index %d, entry %d\n", value, sonde.config.display[value]);
   currentDisplay = sonde.config.display[value];
 }
 
@@ -2344,7 +2322,7 @@ void loopSpectrum() {
 
   if (sonde.config.spectrum > 0) {
     int remaining = sonde.config.spectrum - (millis() - specTimer) / 1000;
-    Serial.printf("config.spectrum:%d  specTimer:%ld millis:%ld remaining:%d\n", sonde.config.spectrum, specTimer, millis(), remaining);
+    LOG_D(TAG, "config.spectrum:%d  specTimer:%ld millis:%ld remaining:%d\n", sonde.config.spectrum, specTimer, millis(), remaining);
     if (sonde.config.marker != 0) {
       marker = 1;
     }
@@ -2432,7 +2410,7 @@ void enableNetwork(bool enable) {
 // Events used only for debug output right now
 void WiFiEvent(WiFiEvent_t event)
 {
-  Serial.printf("[WiFi-event] event: %d\n", event);
+  LOG_D(TAG, "[WiFi-event] event: %d\n", event);
 
   switch (event) {
     case ARDUINO_EVENT_WIFI_READY:
@@ -2462,7 +2440,7 @@ void WiFiEvent(WiFiEvent_t event)
 	Serial.println("WiFi State was connect");
 	break;
       }
-      Serial.printf("Turning off (state is %d)\n", wifi_state);
+      LOG_D(TAG, "Turning off (state is %d)\n", wifi_state);
       WiFi.mode(WIFI_MODE_NULL);
       break;
     case ARDUINO_EVENT_WIFI_OFF:
@@ -2539,7 +2517,7 @@ void WiFiEvent(WiFiEvent_t event)
 
 
 void wifiConnect(int16_t res) {
-  Serial.printf("WiFi scan result: found %d networks\n", res);
+  LOG_I(TAG, "WiFi scan result: found %d networks\n", res);
 
   // pick best network
   int bestEntry = -1;
@@ -2564,7 +2542,7 @@ void wifiConnect(int16_t res) {
   }
   WiFi.scanDelete();
   if (bestEntry >= 0) {
-    Serial.printf("WiFi Connecting BSSID: %02X:%02X:%02X:%02X:%02X:%02X SSID: %s PW %s Channel: %d (RSSI %d)\n", bestBSSID[0], bestBSSID[1], bestBSSID[2], bestBSSID[3], bestBSSID[4], bestBSSID[5], fetchWifiSSID(bestEntry), fetchWifiPw(bestEntry), bestChannel, bestRSSI);
+    LOG_D(TAG, "WiFi Connecting BSSID: %02X:%02X:%02X:%02X:%02X:%02X SSID: %s PW %s Channel: %d (RSSI %d)\n", bestBSSID[0], bestBSSID[1], bestBSSID[2], bestBSSID[3], bestBSSID[4], bestBSSID[5], fetchWifiSSID(bestEntry), fetchWifiPw(bestEntry), bestChannel, bestRSSI);
     wifi_state = WIFI_CONNECT;
     WiFi.begin(fetchWifiSSID(bestEntry), fetchWifiPw(bestEntry), bestChannel, bestBSSID);
   } else {
@@ -2584,7 +2562,7 @@ void wifiConnectDirect(int16_t index) {
 static int wifi_cto;
 
 void loopWifiBackground() {
-  Serial.printf("WifiBackground: state %d\n", wifi_state);
+  LOG_D(TAG, "WifiBackground: state %d\n", wifi_state);
   // handle Wifi station mode in background
   if (sonde.config.wifi == 0 || sonde.config.wifi == 2) return; // nothing to do if disabled or access point mode
 
@@ -2619,7 +2597,7 @@ void loopWifiBackground() {
       wifi_state = WIFI_CONNECTED;
       // update IP in display
       String localIPstr = WiFi.localIP().toString();
-      Serial.printf("IP is %s\n", localIPstr.c_str());
+      LOG_I(TAG, "IP is %s\n", localIPstr.c_str());
       sonde.setIP(localIPstr.c_str(), false);
       sonde.updateDisplayIP();
       enableNetwork(true);
@@ -2629,7 +2607,7 @@ void loopWifiBackground() {
       WiFi.disconnect(true);
     }
   } else if (wifi_state == WIFI_CONNECTED) {
-    //Serial.printf("status: %d\n", ((WiFiSTAClass)WiFi).status());
+    //LOG_D(TAG, "status: %d\n", ((WiFiSTAClass)WiFi).status());
     if (WiFi.status() != WL_CONNECTED) {
       sonde.setIP("", false);
       sonde.updateDisplayIP();
@@ -2746,11 +2724,11 @@ void loopWifiScan() {
       line = (line + 1) % (disph / dispys);
       String mac = WiFi.BSSIDstr(i);
       const char *encryptionTypeDescription = translateEncryptionType(WiFi.encryptionType(i));
-      Serial.printf("Network %s: RSSI %d, MAC %s, enc: %s\n", ssid.c_str(), WiFi.RSSI(i), mac.c_str(), encryptionTypeDescription);
+      LOG_I(TAG, "Network %s: RSSI %d, MAC %s, enc: %s\n", ssid.c_str(), WiFi.RSSI(i), mac.c_str(), encryptionTypeDescription);
       int curidx = fetchWifiIndex(ssid.c_str());
       if (curidx >= 0 && index == -1) {
         index = curidx;
-        Serial.printf("Match found at scan entry %d, config network %d\n", i, index);
+        LOG_I(TAG, "Match found at scan entry %d, config network %d\n", i, index);
       }
     }
     if (index >= 0) { // some network was found
@@ -2877,7 +2855,7 @@ void execOTA() {
     }
     *sz = 0;
     int len = atoi(sz + 1);
-    Serial.printf("Updating file %s (%d bytes)\n", fn, len);
+    LOG_I(TAG, "Updating file %s (%d bytes)\n", fn, len);
     char fnstr[17];
     memset(fnstr, ' ', 16);
     strncpy(fnstr, fn, 16);
@@ -2906,7 +2884,7 @@ void execOTA() {
   }
 
   // Connection succeeded, fecthing the bin
-  Serial.printf("Fetching bin: %supdate.ino.bin\n", updatePrefix);
+  LOG_I(TAG, "Fetching bin: %supdate.ino.bin\n", updatePrefix);
   disp.rdis->drawString(0, 3 * dispys, "Fetching update");
 
   // Get the contents of the bin file
@@ -3056,8 +3034,10 @@ int fetchHTTPheader(int *validType) {
 
 
 void loop() {
-  Serial.printf("\nMAIN: Running loop in state %d [currentDisp:%d, lastDisp:%d]. free heap: %d, unused stack: %d\n",
+  LOG_I(TAG, "Running loop in state %d [currentDisp:%d, lastDisp:%d]. free heap: %d, unused stack: %d\n",
                 mainState, currentDisplay, lastDisplay, ESP.getFreeHeap(), uxTaskGetStackHighWaterMark(0));
+
+  Log.handleImprov();
 
 #ifndef REMOVE_ALL_FOR_TESTING
   switch (mainState) {

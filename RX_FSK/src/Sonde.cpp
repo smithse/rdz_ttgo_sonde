@@ -267,8 +267,9 @@ void Sonde::defaultConfig() {
                             config.sx1278_sck = 18; // SCK;
 			} else {
 			// Likely a TTGO V2.1_1.6
-			config.button_pin = 2 + 128;     // GPIO2 / T2
-			config.button2_pin = 14 + 128;   // GPIO14 / T6
+			// TODO: Maybe find some other default values for touch buttons?
+			config.button_pin = -1;  // not good with SD-Card: 2 + 128;     // GPIO2 / T2
+			config.button2_pin = -1;  // not good with SD-Card: 14 + 128;   // GPIO14 / T6
 			config.led_pout = 25;
 			config.batt_adc = 35; 
 			config.sd.cs = 13;
@@ -352,7 +353,7 @@ void Sonde::setConfig(const char *cfg) {
 	char *val = s+1;
 	*s=0; s--;
 	while(s>cfg && (*s==' '||*s=='\t')) { *s=0; s--; }
-	LOG_D(TAG, "configuration option '%s'=%s \n", cfg, val);
+	//LOG_D(TAG, "configuration option '%s'=%s \n", cfg, val);
 
 	// new code: use config_list to find config entry...
 	int i;
@@ -662,15 +663,15 @@ uint8_t Sonde::timeoutEvent(SondeInfo *si) {
 		now, si->norxStart, disp.layout->timeouts[2], si->lastState);
 #endif
 	if(disp.layout->timeouts[0]>=0 && now - si->viewStart >= disp.layout->timeouts[0]) {
-		LOG_I(TAG, "Sonde::timeoutEvent: View");
+		LOG_I(TAG, "Sonde::timeoutEvent: View\n");
 		return EVT_VIEWTO;
 	}
 	if(si->lastState==1 && disp.layout->timeouts[1]>=0 && now - si->rxStart >= disp.layout->timeouts[1]) {
-		LOG_I(TAG, "Sonde::timeoutEvent: RX");
+		LOG_I(TAG, "Sonde::timeoutEvent: RX\n");
 		return EVT_RXTO;
 	}
 	if(si->lastState==0 && disp.layout->timeouts[2]>=0 && now - si->norxStart >= disp.layout->timeouts[2]) {
-		LOG_I(TAG, "Sonde::timeoutEvent: NORX");
+		LOG_I(TAG, "Sonde::timeoutEvent: NORX\n");
 		return EVT_NORXTO;
 	}
 	return 0;

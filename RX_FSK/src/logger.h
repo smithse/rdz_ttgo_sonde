@@ -14,6 +14,9 @@ enum LOGLEVEL { L_ERR, L_WARN, L_INFO, L_DBG };
 class Logger {
    public: 
    void logf(LOGLEVEL lvl, const char *module, const char *fmt, ...);
+   void sendImprov(int type, int len, const char *data);
+   void sendImprovResult(int cmd, const char *data[]);
+   void handleImprov();
 };
 
 

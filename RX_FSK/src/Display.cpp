@@ -11,6 +11,7 @@
 #include "Sonde.h"
 #include "pmu.h"
 
+
 int readLine(Stream &stream, char *buffer, int maxlen);
 
 extern const char *version_name;
@@ -1092,7 +1093,7 @@ void Display::initFromFile(int index) {
 		const char *ptr;
 		readLine(d, lineBuf, LINEBUFLEN);
 		const char *s = trim(lineBuf);
-		LOG_D(TAG, "Line: '%s'\n", s);
+		//LOG_D(TAG, "Line: '%s'\n", s);
 		if(*s == '#') continue;  // ignore comments
 		switch(what) {
 			case -1:	// wait for start of screen (@)
@@ -1174,8 +1175,8 @@ void Display::initFromFile(int index) {
 					newlayouts[idx].de[what].y = y;
 					newlayouts[idx].de[what].width = n>2 ? w : WIDTH_AUTO;
 					parseDispElement(text, newlayouts[idx].de+what);
-					LOG_D(TAG, "entry at %d,%d width=%d font %d, color=%x,%x\n", (int)x, (int)y, newlayouts[idx].de[what].width, newlayouts[idx].de[what].fmt,
-							newlayouts[idx].de[what].fg, newlayouts[idx].de[what].bg);
+					//LOG_D(TAG, "entry at %d,%d width=%d font %d, color=%x,%x\n", (int)x, (int)y, newlayouts[idx].de[what].width, newlayouts[idx].de[what].fmt,
+					//		newlayouts[idx].de[what].fg, newlayouts[idx].de[what].bg);
 					if(newlayouts[idx].de[what].func == disp.drawGPS) {
 						newlayouts[idx].usegps = GPSUSE_BASE|GPSUSE_DIST|GPSUSE_BEARING; // just all for now
 					}
