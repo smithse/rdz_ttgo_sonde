@@ -723,6 +723,7 @@ struct st_configitems config_list[] = {
   {"mqtt.username", 63, &sonde.config.mqtt.username},
   {"mqtt.password", 63, &sonde.config.mqtt.password},
   {"mqtt.prefix", 63, &sonde.config.mqtt.prefix},
+  {"mqtt.report_interval", 0, &sonde.config.mqtt.report_interval},
 #endif
 #if FEATURE_SDCARD
   /* SD-Card settings */

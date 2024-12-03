@@ -23,6 +23,7 @@ struct StationPos {
         int8_t sat;
         int8_t valid;
 	int8_t chase;
+        char time[20];
 };
 
 extern struct StationPos gpsPos, posInfo;

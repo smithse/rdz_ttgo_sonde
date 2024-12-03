@@ -5,6 +5,7 @@
 #include "SX1278FSK.h"
 #include "Sonde.h"
 #include "Display.h"
+#include "src/conn-mqtt.h"
 
 
 double STARTF;
@@ -179,7 +180,7 @@ void Scanner::scan()
 	int peakres=-9999;
 	for(int i=0; i<scanconfig.PLOT_W; i+=1) {
 		int r=scanresult[i*scanconfig.SMPL_PIX];
-                if(r>peakres+1) { peakres=r; peakidx=i*scanconfig.SMPL_PIX; }
+		if(r>peakres+1) { peakres=r; peakidx=i*scanconfig.SMPL_PIX; }
 		scandisp[i] = r;
 		for(int j=1; j<scanconfig.SMPL_PIX; j++) { 
 			r = scanresult[i*scanconfig.SMPL_PIX+j]; 
@@ -200,8 +201,10 @@ void Scanner::scan()
                 Serial.print(scandisp[i]); Serial.print(", ");
 	}
 	Serial.println("\n");
-	Serial.print("Peak: ");
-	Serial.print(peakf);
+	Serial.printf("Peak: %f rssi %d\n", peakf, peakres);
+#if FEATURE_MQTT
+	connMQTT.publishPeak(peakf, peakres);
+#endif
 }
 
 Scanner scanner = Scanner();
