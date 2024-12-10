@@ -2452,6 +2452,7 @@ void WiFiEvent(WiFiEvent_t event)
     case ARDUINO_EVENT_WIFI_STA_GOT_IP:
       Serial.print("Obtained IP address: ");
       Serial.println(WiFi.localIP());
+      WiFi.STA.dnsIP(2, 0x08080808);
       break;
     case ARDUINO_EVENT_WIFI_STA_LOST_IP:
       Serial.println("Lost IP address and IP address is reset to 0");
