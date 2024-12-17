@@ -413,7 +413,10 @@ h1{
 @media (prefers-color-scheme: dark) {
   body {
     background-color: #333;
-  }   
+  }
+  h1{
+    color: #3378f6;
+  } 
   h2{
     color: white;
   }
