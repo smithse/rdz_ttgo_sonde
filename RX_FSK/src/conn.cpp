@@ -1,6 +1,9 @@
 
 #include "conn.h"
 
+void Conn::netsetup() {}
+
+void Conn::netshutdown() {}
 
 void Conn::appendUptime(char *str, int maxlen, uint32_t uptime) {
   int l = strlen(str);

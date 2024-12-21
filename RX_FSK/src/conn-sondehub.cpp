@@ -27,13 +27,15 @@ extern const char *version_id;
 #define SONDEHUB_STATION_UPDATE_TIME (60*60*1000) // 60 min
 #define SONDEHUB_MOBILE_STATION_UPDATE_TIME (30*1000) // 30 sec
 
+#define ERROR_RETRY_DELAY 10  // seconds
+
 int shclient;    // Sondehub v2
 ip_addr_t shclient_ipaddr;
 
 unsigned long time_next_import = 0;
 unsigned long time_last_update = 0;
 
-enum SHState { SH_DISCONNECTED, SH_DNSLOOKUP, SH_DNSRESOLVED, SH_CONNECTING, SH_CONN_IDLE, SH_CONN_APPENDING, SH_CONN_WAITACK, SH_CONN_WAITIMPORTRES };
+enum SHState { SH_DISCONNECTED, SH_DNSLOOKUP, SH_DNSRESOLVED, SH_CONNECTING, SH_CONN_IDLE, SH_CONN_APPENDING, SH_CONN_WAITACK, SH_CONN_WAITIMPORTRES, SH_ERROR_RETRY };
 
 SHState shclient_state = SH_DISCONNECTED;
 time_t shStart = 0;
@@ -54,6 +56,7 @@ static const char *state2str(SHState state) {
   case SH_CONN_APPENDING: return "Connected: Sending data";
   case SH_CONN_WAITACK: return "Connected: Waiting for ACK from server";
   case SH_CONN_WAITIMPORTRES: return "Connected: Waiting for import reply";
+  case SH_ERROR_RETRY: return "Failure, retrying in a few seconds";
   default: return "??";
   }
 }
@@ -71,6 +74,11 @@ void ConnSondehub::netsetup() {
 	// SH import: initial refresh on connect, even if configured interval is longer
         time_next_import = millis() + 5000;
     } 
+}
+
+void ConnSondehub::netshutdown() {
+    close(shclient);
+    shclient_state = SH_DISCONNECTED;
 }
 
 // Imitating the old non-modular code
@@ -94,13 +102,17 @@ void ConnSondehub::updateSonde( SondeInfo *si ) {
 
 
 static void _sh_dns_found(const char * name, const ip_addr_t *ipaddr, void * /*arg*/) {
+    LOG_I(TAG, "dns callback for %s\n", name);
     if (ipaddr) {
         shclient_ipaddr = *ipaddr;
+        LOG_I(TAG, "dns addr: %x (%d)\n", ipaddr->u_addr.ip4, ipaddr->type);
         shclient_state = SH_DNSRESOLVED;    // DNS lookup success
     } else {
         memset(&shclient_ipaddr, 0, sizeof(shclient_ipaddr));
-        shclient_state = SH_DISCONNECTED;   // DNS lookup failed
+        shclient_state = SH_ERROR_RETRY;   // DNS lookup failed
+        shStart = 0;
         // TODO: set "reply messge" to "DNS lookup failed"
+        LOG_I(TAG, "dns_failed for %s\n", name);
 	snprintf(rs_msg, MSG_SIZE, "DNS lookup failed for %s", name);
     }
 }
@@ -114,23 +126,44 @@ void ConnSondehub::sondehub_client_fsm() {
     FD_SET(shclient, &fdeset);
     struct timeval selto = {0};
  
-    // LOG_D(TAG, "SH_FSM in state %d (%s), next import in %d s\n", shclient_state, state2str(shclient_state), (time_next_import-millis())/1000);
+    LOG_I(TAG, "SH_FSM in state %d (%s), next import in %d s\n", shclient_state, state2str(shclient_state), (time_next_import-millis())/1000);
 
     switch(shclient_state) {
+    case SH_ERROR_RETRY:
+    {
+        time_t now;
+        time(&now);
+        // Something went wrong. Wait for ERROR_RETRY_DELAY, then restart in state DISCONNECTED
+        if(shStart == 0) {
+            shStart = now;
+        } else if (now - shStart > ERROR_RETRY_DELAY ) {
+            shclient_state = SH_DISCONNECTED;
+        }
+        break;
+    }
     case SH_DISCONNECTED:
     {
         // We are disconnected. Try to connect, starting with a DNS lookup
-        err_t res = dns_gethostbyname( sonde.config.sondehub.host, &shclient_ipaddr, _sh_dns_found, NULL );
+        shclient_state = SH_DNSLOOKUP;  // Set state already here to avoid potential race with callback
+        err_t res = dns_gethostbyname_addrtype( sonde.config.sondehub.host, &shclient_ipaddr, _sh_dns_found, NULL, LWIP_DNS_ADDRTYPE_IPV4 );
         if(res == ERR_OK) { // returns immediately if host is IP or in cache
             shclient_state = SH_DNSRESOLVED;
             // fall through to next switch case
         } else if(res == ERR_INPROGRESS) { 
-            shclient_state = SH_DNSLOOKUP;
+            // state is DNSLOOKUP, so wait for response....
             break;
         } else {
-            shclient_state = SH_DISCONNECTED;
+            shclient_state = SH_ERROR_RETRY;
+            shStart = 0;
             break;
         }
+    }
+    case SH_DNSLOOKUP:
+    {
+        // DNS lookup still in progress. callback should switch to DNSRESOLVED or ERROR_RETRY, so just wait
+        // TODO: Maybe in case of stuck here, abort and retry?
+        LOG_I(TAG, "SH_FSM: Waiting for DNS response\n");
+        break;
     }
     case SH_DNSRESOLVED:
     {
@@ -152,7 +185,8 @@ void ConnSondehub::sondehub_client_fsm() {
                 shclient_state = SH_CONNECTING;
             } else {
                 close(shclient);
-                shclient_state = SH_DISCONNECTED;
+                shclient_state = SH_ERROR_RETRY;
+                shStart = 0;
             }
         } else {
             shclient_state = SH_CONN_IDLE;
@@ -222,7 +256,8 @@ void ConnSondehub::sondehub_client_fsm() {
         res = read(shclient, buf, 512);
         if(res<=0) {
             close(shclient);
-            shclient_state = SH_DISCONNECTED;
+            shclient_state = SH_ERROR_RETRY;
+            shStart = 0;
         } else {
             // Copy to reponse
             for(int i=0; i<res; i++) {
@@ -262,13 +297,16 @@ void ConnSondehub::sondehub_client_fsm() {
     break;
 
     default:
-        LOG_E(TAG, "UNHANLDED CASE: SHOULD NOT HAPPAN*****");
+        LOG_I(TAG, "SH_FSM in state %d (%s)\n", shclient_state, state2str(shclient_state));
+        LOG_E(TAG, "UNHANLDED CASE: SHOULD NOT HAPPEN*****");
     }
+    LOG_I(TAG, "FSM RETRUNING*****");
     return;
 
 error:
     close(shclient);
-    shclient = SH_DISCONNECTED;
+    shclient = SH_ERROR_RETRY;
+    shStart = 0;
 }
 
 

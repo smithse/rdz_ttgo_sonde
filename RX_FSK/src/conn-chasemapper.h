@@ -8,6 +8,7 @@ class ConnChasemapper : public Conn {
 public:
 	void init();
 	void netsetup();
+	void netshutdown();
 	void updateSonde( SondeInfo *si );
 	void updateStation( PosInfo *pi );
         String getStatus();

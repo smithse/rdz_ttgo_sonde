@@ -23,6 +23,8 @@ public:
         /* Called whenever the network becomes available */
         void netsetup();
 
+        /* Close connections */
+        void netshutdown();
 
         /* Called approx 1x / second (maybe only if good data is available) */
         void updateSonde( SondeInfo *si );

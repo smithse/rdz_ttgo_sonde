@@ -28,6 +28,9 @@ public:
 	/* Called whenever the network becomes available */
 	virtual void netsetup();
 
+        /* Called when the network is shut down or when reconfiguration is forced, netshutdown connections... */
+        virtual void netshutdown();
+
 	/* Called approx 1x / second (maybe only if good data is available) */
 	virtual void updateSonde( SondeInfo *si );
 

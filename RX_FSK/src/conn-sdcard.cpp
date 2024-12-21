@@ -8,6 +8,14 @@
 #include <dirent.h>
 #include <time.h>
 
+extern SemaphoreHandle_t globalLock;
+#define SPI_MUTEX_LOCK() \
+        do                     \
+{                      \
+} while (xSemaphoreTake(globalLock, portMAX_DELAY) != pdPASS)
+#define SPI_MUTEX_UNLOCK() xSemaphoreGive(globalLock)
+
+
 static SPIClass sdspi(HSPI);
 
 const char *cardTypeStr(uint8_t cardtype) {
@@ -24,6 +32,7 @@ void ConnSDCard::init() {
   if(sonde.config.sd.clk==-1)
     return;
 
+  SPI_MUTEX_LOCK();
   /* Initialize SD card */
   // SPI (==VSPI) is used by SX127x. 
   // On LoRa32, SD-Card is on different pins, so cannot share VSPI
@@ -40,6 +49,7 @@ void ConnSDCard::init() {
   uint32_t usedSize = SD.usedBytes() / (1024 * 1024);
   uint32_t totalSize = SD.totalBytes() / (1024 * 1024);
   Serial.printf("SD Card used/total: %lu/%lu MB\n", usedSize, totalSize);
+  SPI_MUTEX_UNLOCK();
 
 #if 0
   file = SD.open("/data.csv", FILE_APPEND);
@@ -76,6 +86,10 @@ void ConnSDCard::netsetup() {
   /* empty function, we don't use any network here */
 }
 
+void ConnSDCard::netshutdown() {
+  /* empty function, we don't use any network here */
+}
+
 // Rotation by time or by id.
 // only by id for now.
 static char logName[20], logOldName[20] = {0};
@@ -90,6 +104,7 @@ void ConnSDCard::updateSonde( SondeInfo *si ) {
   SondeData *sd = &si->d;
   is_to_logname(logName, 20, sd);
 
+  SPI_MUTEX_LOCK();
   if(strcmp(logName, logOldName) || !file) {
     if(file) file.close();
     file = SD.open(logName, FILE_APPEND);
@@ -114,6 +129,7 @@ void ConnSDCard::updateSonde( SondeInfo *si ) {
     file.flush();
     wcount = 0;
   }
+  SPI_MUTEX_UNLOCK();
 }
 
 static StationPos lastPI={0};
@@ -123,7 +139,8 @@ static StationPos lastPI={0};
 void ConnSDCard::updateStation( PosInfo *pi ) {
   if (!initok) return;
   if( lastPI.lat == posInfo.lat && lastPI.lon == posInfo.lon) return;
-  
+
+  SPI_MUTEX_LOCK();
   File posfile = SD.open("/mypos.csv", FILE_APPEND);
   if(!posfile) {
     Serial.println("Error opening /mypos.csv");
@@ -138,6 +155,7 @@ void ConnSDCard::updateStation( PosInfo *pi ) {
 
   posfile.printf("%s,%.6f,%.6f\n", ftim, posInfo.lat, posInfo.lon);
   posfile.close();
+  SPI_MUTEX_UNLOCK();
   lastPI = posInfo;
 }
 
@@ -145,12 +163,14 @@ String ConnSDCard::getStatus() {
   if(sonde.config.sd.cs == -1) { return String("disabled"); }
   if(!initok) { return String("SD card init failed"); }
 
+  SPI_MUTEX_LOCK();
   uint8_t cardType = SD.cardType();
   if (cardType == CARD_NONE) { return String(cardTypeStr(cardType)); }
 
   uint32_t cardSize = SD.cardSize() / (1024 * 1024);
   uint32_t usedSize = SD.usedBytes() / (1024 * 1024);
   uint32_t totalSize = SD.totalBytes() / (1024 * 1024);
+  SPI_MUTEX_UNLOCK();
   char buf[256];
   snprintf(buf, 256, "SD card type: %s [size: %lu MB]. File system: %lu / %lu MB used", cardTypeStr(cardType),
     cardSize, usedSize, totalSize);

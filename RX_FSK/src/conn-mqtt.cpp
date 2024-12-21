@@ -64,6 +64,12 @@ void MQTT::netsetup() {
     }
 }
 
+void MQTT::netshutdown() {
+    mqttClient.disconnect(false);  // nice shutdown....
+    delay(200);
+    mqttClient.disconnect(true);  // force
+}
+
 
 void MQTT::updateSonde( SondeInfo *si ) {
     if(!sonde.config.mqtt.active)

@@ -18,6 +18,9 @@ void ConnSystem::netsetup() {
   /* empty function, we don't use any network here */
 }
 
+void ConnSystem::netshutdown() {
+}
+
 void ConnSystem::updateSonde( SondeInfo *si ) {
 }
 

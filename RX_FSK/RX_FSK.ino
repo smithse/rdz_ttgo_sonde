@@ -1878,6 +1878,7 @@ void setup()
   Serial.println("Reading initial configuration");
   setupConfigData();    // configuration must be read first due to OLED ports!!!
   WiFi.setHostname(sonde.config.mdnsname);
+  //WiFi.enableIPv6();
 
   // NOT TTGO v1 (fingerprint 64) or Heltec v1/v2 board (fingerprint 4)
   // and NOT TTGO Lora32 v2.1_1.6 (fingerprint 31/63)
@@ -2382,26 +2383,30 @@ void enableNetwork(bool enable) {
     //   tncserver.begin();
     rdzserver.begin();
     //}
+    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+    connected = true;
 #if FEATURE_MQTT
     connMQTT.netsetup();
 #endif
 #if FEATURE_SONDEHUB
-    //if (sonde.config.sondehub.active && wifi_state != WIFI_APMODE) {
-    //  time_last_update = millis() + 1000; /* force sending update */
-    //  sondehub_station_update(&shclient, &sonde.config.sondehub);
-    //}
     connSondehub.netsetup();
 #endif
-    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-    connected = true;
 #if FEATURE_APRS
     connAPRS.netsetup();
 #endif
   } else {
     MDNS.end();
+#if FEATURE_MQTT
+    connMQTT.netshutdown();
+#endif
+#if FEATURE_SONDEHUB
+    connSondehub.netshutdown();
+#endif
+#if FEATURE_APRS
+    connAPRS.netshutdown();
+#endif
     connected = false;
   }
-
 
   Serial.println("enableNetwork done");
 }
@@ -2491,7 +2496,9 @@ void WiFiEvent(WiFiEvent_t event)
       Serial.println("AP IPv6 is preferred");
       break;
     case ARDUINO_EVENT_WIFI_STA_GOT_IP6:
-      Serial.println("STA IPv6 is preferred");
+      Serial.println("STA obtained IPv6");
+      Serial.println(WiFi.STA.globalIPv6());
+      Serial.println(WiFi.STA.linkLocalIPv6());
       break;
     case ARDUINO_EVENT_ETH_GOT_IP6:
       Serial.println("Ethernet IPv6 is preferred");
@@ -2683,6 +2690,7 @@ void loopTouchCalib() {
 static const char* _scan[2] = {"/", "\\"};
 void loopWifiScan() {
   getKeyPressEvent(); // Clear any old events
+  enableNetwork(false);
   WiFi.disconnect(true);
   wifi_state = WIFI_DISABLED;
   disp.rdis->setFont(FONT_SMALL);
@@ -2950,11 +2958,11 @@ void execOTA() {
       // Understand the partitions and
       // space availability
       Serial.println("Not enough space to begin OTA");
-      client.flush();
+      client.clear();
     }
   } else {
     Serial.println("There was no content in the response");
-    client.flush();
+    client.clear();
   }
   // Back to some normal state
   enterMode(ST_DECODER);

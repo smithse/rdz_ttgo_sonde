@@ -68,6 +68,10 @@ void ConnAPRS::netsetup() {
     }
 }
 
+void ConnAPRS::netshutdown() {
+    tncserver.close();
+}
+
 void ConnAPRS::updateSonde( SondeInfo *si ) {
     // prepare data (for UDP and TCP output)
     char *str = aprs_senddata(si, sonde.config.call, sonde.config.objcall, sonde.config.tcpfeed.symbol);

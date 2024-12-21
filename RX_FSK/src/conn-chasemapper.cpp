@@ -13,6 +13,8 @@ void ConnChasemapper::init() {
 void ConnChasemapper::netsetup() {
 }
 
+void ConnChasemapper::netshutdown() {
+}
 
 void ConnChasemapper::updateSonde(SondeInfo *si) {
 	char buf[1024];
