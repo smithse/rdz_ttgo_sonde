@@ -124,10 +124,10 @@ void gpsTask(void *parameter) {
         }
         if(strncmp(nmeastring+3, "GGA", 3)==0 || strncmp(nmeastring+3, "RMC", 3)==0) {
             strncpy(lastnmea, nmeastring, 100);
-	    Serial.printf("GPS: last position nmea: %s\n", lastnmea);
+	    //Serial.printf("GPS: last position nmea: %s\n", lastnmea);
  	}
  	else  {
-	    Serial.printf("GPS: last nmea: %s\n", nmeastring);
+	    //Serial.printf("GPS: last nmea: %s\n", nmeastring);
 	}
         gpsPos.valid = nmea.isValid();
         if (gpsPos.valid) {
