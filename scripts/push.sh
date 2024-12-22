@@ -63,7 +63,7 @@ generate_website_index() {
   done
   echo "</ul>
   <br>
-  <p>Last latter/number of version number indicate SPIFFS file system version. If the first (upper-case)
+  <p>Last latter/number of version number indicate SPI LittleFS file system version. If the first (upper-case)
    letter has changed, then this version is incompabible with prevision versions and you have to flash
    the full image. If the second part (number) has changed, then this version has some changes
    (e.g. internal web page layout, LCD/TFT display layout) in the file system which you will not get with
@@ -75,8 +75,8 @@ generate_website_index() {
 commit_website_files() {
   BRANCH=`git branch --show-current`
   VERSION=`cat RX_FSK/version.h | grep version_id | egrep -o '".*"' | sed 's/"//g' | sed 's/ /_/g'`
-  FSMAJOR=`cat RX_FSK/version.h | grep SPIFFS_MAJOR | perl -e '$_=<>;print /=(.*);/?chr($1+64):""'`
-  FSMINOR=`cat RX_FSK/version.h | grep SPIFFS_MINOR | perl -e '$_=<>;print /=(.*);/?$1:""'`
+  FSMAJOR=`cat RX_FSK/version.h | grep FS_MAJOR | perl -e '$_=<>;print /=(.*);/?chr($1+64):""'`
+  FSMINOR=`cat RX_FSK/version.h | grep FS_MINOR | perl -e '$_=<>;print /=(.*);/?$1:""'`
   VERSION=$VERSION-$FSMAJOR$FSMINOR
   COMMIT_MESSAGE=`git log -1 --pretty=%B`
 
