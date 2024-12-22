@@ -35,7 +35,7 @@ const char *manufacturer_string[]={"Graw", "Vaisala", "Vaisala", "Meteomodem", "
 //const char *DEFEPH="gssc.esa.int/gnss/data/daily/%1$04d/brdc/brdc%2$03d0.%3$02dn.gz";
 const char *DEFEPH="gssc.esa.int/gnss/data/daily/%04d/brdc/brdc%03d0.%02dn.gz";
 
-int fingerprintValue[]={ 17, 31, 64, 4, 55, 48, 23, 128+23, 119, 128+119, -1 };
+int fingerprintValue[]={ 17, 31, 64, 4, 55, 48, 23, 128+23, 119, 128+119, 95, 79, -1 };
 const char *fingerprintText[]={
   "TTGO T-Beam (new version 1.0),  I2C not working after powerup, assuming 0.9\" OLED@21,22",
   "TTGO LORA32 v2.1_1.6 (0.9\" OLED@21,22)",
@@ -47,7 +47,22 @@ const char *fingerprintText[]={
   "TTGO T-Beam (V1.0), SPI TFT@4,13,14",
   "TTGO T-Beam (V1.1), 0.9\" OLED@21,22",
   "TTGO T-Beam (V1.1), SPI TFT@4,13,14",
+  "M5 Core Gray",
+  "M5 Core Gray?"
 };
+
+enum BoardTypes {
+   TBEAM_0_7,
+   TBEAM_1_0,
+   TBEAM_1_1,
+   TBEAM_1_2,
+   TTGO_LORA_2,
+   HELTEC_v1_v2,
+   M5_CORE_GRAY,
+   M5_CORE2,
+   UNKNOWN
+};
+
 
 /* global variables from RX_FSK.ino */
 int getKeyPressEvent(); 
@@ -76,6 +91,7 @@ Sonde::Sonde() {
 		initlevels[i] = gpio_get_level((gpio_num_t)i);
   	}
 }
+
 
 void Sonde::defaultConfig() {
 	fingerprint = initlevels[4];
