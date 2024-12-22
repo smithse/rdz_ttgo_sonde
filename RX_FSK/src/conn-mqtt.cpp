@@ -1,6 +1,9 @@
 #include "../features.h"
 #if FEATURE_MQTT
 
+#define TAG "conn-mqtt"
+#include "logger.h"
+
 #include "../core.h"
 
 #include <Arduino.h>
@@ -41,7 +44,7 @@ void MQTT::init() {
 
 // Internal helper function for netsetup
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
-  Serial.printf("Message arrived [%s]", topic);
+  LOG_D(TAG, "mqttCallback: rx on topic [%s]", topic);
   for (int i=0;i<length;i++) {
     Serial.print((char)payload[i]);
   }
@@ -62,7 +65,7 @@ void MQTT::netsetup() {
     mqttClient.setServer(ip, sonde.config.mqtt.port);
     snprintf(clientID, 20, "%s%04d", sonde.config.mqtt.id, (int)random(0, 1000));
     clientID[20] = 0;
-    Serial.printf("[MQTT] pubsub client %s connecting to %s\n", clientID, sonde.config.mqtt.host);
+    LOG_I(TAG, "pubsub client %s connecting to %s\n", clientID, sonde.config.mqtt.host);
     mqttClient.setClientId(clientID);
     if (strlen(sonde.config.mqtt.password) > 0) {
         mqttClient.setCredentials(sonde.config.mqtt.username, sonde.config.mqtt.password);
@@ -78,7 +81,7 @@ void MQTT::netshutdown() {
 
 void MQTT::updateSonde( SondeInfo *si ) {
     if(mqttGate(MQTT_SEND_UPTIME)){
-        Serial.println("Sending sonde info via MQTT");
+        LOG_D(TAG, "updateSonde publishing sonde info");
 	// TODO: Check if si is good / fresh
         publishPacket(si);
     }
@@ -110,7 +113,7 @@ int MQTT::connectToMqtt() {
     return 0;
   if(0 == sonde.config.mqtt.active)
     return 0;
-  Serial.println("MQTT not connected, connecting....");
+  LOG_D(TAG, "MQTT not connected, connecting....");
   mqttClient.connect();
   return 1;
 }
@@ -136,7 +139,6 @@ void MQTT::publishUptime()
     if(!mqttGate(MQTT_SEND_UPTIME))
         return;
 
-    Serial.println("[MQTT] writing");
     char payload[256];
 
     timeFormat();
@@ -155,7 +157,7 @@ void MQTT::publishUptime()
     snprintf(payload, 256,
         "%s \"SW\": \"%s\", \"VER\": \"%s\"}",
         payload, version_name, version_id);
-    Serial.println(payload);
+    LOG_D(TAG, "publishUptime: sending %s\n", payload);
     char topic[128];
     snprintf(topic, 128, "%s%s", sonde.config.mqtt.prefix, "uptime");
     mqttClient.publish(topic, 1, 1, payload);
@@ -181,6 +183,7 @@ void MQTT::publishPmuInfo()
         i_batt, pmu->getBattVoltage() / 1000.,
         pmu->getVbusCurrent(), pmu->getVbusVoltage() / 1000.,
         pmu->getTemperature());
+    LOG_D(TAG, "publishPmuInfo: sending %s\n", payload);
 
     char topic[128];
     snprintf(topic, sizeof(topic), "%s%s", sonde.config.mqtt.prefix, "pmu");
@@ -202,6 +205,7 @@ void MQTT::publishGps()
              gpsPos.lat, gpsPos.lon, gpsPos.alt,
              gpsPos.course, gpsPos.speed, gpsPos.sat
         );
+    LOG_D(TAG, "publishGps: sending %s\n", payload);
 
     char topic[128];
     snprintf(topic, sizeof(topic), "%s%s", sonde.config.mqtt.prefix, "gps");
@@ -217,6 +221,8 @@ void MQTT::publishPeak(double pf, int rssi)
     timeFormat();
     char payload[256];
     snprintf(payload, 256, "{\"time\": \"%s\". \"peak\": %.3f, \"rssi\": %.1f}",time_str, pf*1e-6, rssi/2.0);
+    LOG_D(TAG, "publishPeak: sending %s\n", payload);
+
     char topic[128];
     snprintf(topic, sizeof(topic), "%s%s", sonde.config.mqtt.prefix, "spectrum");
     mqttClient.publish(topic, 1, /* retain */ false, payload);
@@ -233,6 +239,8 @@ void MQTT::publishQRG(int num, const char* type, char* launchsite, float mhz)
         payload, 256,
         "{\"num\": %d, \"type\": \"%s\", \"site\": \"%s\", \"freq\": %.3f}",
         num, type, launchsite, mhz);
+    LOG_D(TAG, "publishQRG: sending %s\n", payload);
+
     char topic[128];
     snprintf(topic, sizeof(topic), "%s%s", sonde.config.mqtt.prefix, "qrg");
     mqttClient.publish(topic, 1, /*retain*/ false, payload);
@@ -264,13 +272,13 @@ void MQTT::publishPacket(SondeInfo *si)
     int n = sonde2json(payload+1, 1023, si);
     if(n<0) {
 	// ERROR
-        Serial.println("publishPacket: sonde2json failed, string too long");
+        LOG_E(TAG, "publishPacket: sonde2json failed, string too long");
     }
     strcat(payload, "}");   // terminate payload string
 
     char topic[128];
     snprintf(topic, 128, "%s%s", sonde.config.mqtt.prefix, "packet");
-    Serial.print(payload);
+    LOG_D(TAG, "publishPacket: %s\n", payload);
     mqttClient.publish(topic, 1, 1, payload);
 }
 
