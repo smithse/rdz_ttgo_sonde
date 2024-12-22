@@ -97,7 +97,8 @@ int updatePort = 80;
 const char *updatePrefixM = "/main/";
 const char *updatePrefixD = "/dev2/";
 const char *updatePrefix = updatePrefixM;
-
+const char *updateFs = "update.fs.bin";
+const char *updateIno = "update.ino.bin";
 
 #define LOCALUDPPORT 9002
 //Get real UTC time from NTP server
@@ -127,7 +128,11 @@ const char *sondeTypeStrSH[NSondeTypes] = { "DFM", "RS41", "RS92", "Mxx"/*never 
 WiFiServer rdzserver(14570);
 WiFiClient rdzclient;
 
-
+// If a file "localupd.txt" exists, firmware can be updated from a custom IP address read from this file, stored in localUpdates.
+// By default (localUpdates==NULL) this is disabled to prevent abuse
+// Note: by enabling this, someone with access to the web interface can replace the firmware arbitrarily!
+// Make sure that only trustworthy persons have access to the web interface...
+char *localUpdates = NULL;
 
 boolean forceReloadScreenConfig = false;
 
@@ -155,6 +160,14 @@ static unsigned long specTimer;
 void enterMode(int mode);
 void WiFiEvent(WiFiEvent_t event);
 
+
+// Possibly we will need more fine grained permissions in the future...
+// For now, disallow arbitrary firmware updates on standard installations
+// development installations can add a file "localupd.txt" which enables updates from arbitrary locations
+int checkAllowed(const char *filename) {
+    if(!localUpdates && (strstr(filename, "localupd.txt") != NULL)) return 0;
+    return 1;
+}
 
 
 // Read line from file, independent of line termination (LF or CR LF)
@@ -212,7 +225,7 @@ String processor(const String& var) {
   }
   if (var == "FULLNAMEID") {
     char tmp[128];
-    snprintf(tmp, 128, "%s-%c%d", version_id, SPIFFS_MAJOR + 'A' - 1, SPIFFS_MINOR);
+    snprintf(tmp, 128, "%s-%c%d", version_id, FS_MAJOR + 'A' - 1, FS_MINOR);
     return String(tmp);
   }
   if (var == "AUTODETECT_INFO") {
@@ -234,6 +247,10 @@ String processor(const String& var) {
 #else
     return String("Not supported");
 #endif
+  }
+  if (var == "LOCAL_UPDATES") {
+    if(localUpdates) return String(localUpdates);
+    else return String();
   }
   return String();
 }
@@ -949,10 +966,15 @@ const char *handleControlPost(AsyncWebServerRequest * request) {
 void handleUpload(AsyncWebServerRequest * request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
   static File file;
   if (!index) {
+    const char *fn = filename.c_str();
+    if(!checkAllowed(fn)) {
+      LOG_E(TAG, "UploadStart: writing %s prohibited\n", fn);
+      return;
+    }
     LOG_D(TAG, "UploadStart: %s\n", filename.c_str());
     file = LittleFS.open("/" + filename, "w");
     if (!file) {
-      Serial.println("There was an error opening the file '/config.txt' for reading");
+      LOG_E(TAG, "Error opening the file '/%s' for writing", fn);
     }
   }
   if (!file) return;
@@ -1066,8 +1088,15 @@ const char *handleEditPost(AsyncWebServerRequest * request) {
 
   AsyncWebParameter *filep = request->getParam("file");
   if (!filep) return NULL;
+
   String filename = filep->value();
-  LOG_D(TAG, "Writing file <%s>\n", filename.c_str());
+  const char *fn = filename.c_str();
+  if(!checkAllowed(fn)) {
+    LOG_E(TAG, "handleEditPost: writing %s prohibited\n", fn);
+    return NULL;
+  }
+
+  LOG_D(TAG, "Writing file <%s>\n", fn);
   AsyncWebParameter *textp = request->getParam("text", true);
   if (!textp) return NULL;
   LOG_D(TAG, "Parameter size is %d\n", textp->size());
@@ -1101,7 +1130,7 @@ const char *createUpdateForm(boolean run) {
   if (run) {
     strcat(ptr, "<p>Doing update, wait until reboot</p>");
   } else {
-    sprintf(ptr + strlen(ptr), "<p>Currently installed: %s-%c%d</p>\n", version_id, SPIFFS_MAJOR + 'A' - 1, SPIFFS_MINOR);
+    sprintf(ptr + strlen(ptr), "<p>Currently installed: %s-%c%d</p>\n", version_id, FS_MAJOR + 'A' - 1, FS_MINOR);
     strcat(ptr, "<p>Available main: <iframe src=\"http://rdzsonde.mooo.com/main/update-info.html\" style=\"height:40px;width:400px\"></iframe><br>"
            "Available devel: <iframe src=\"http://rdzsonde.mooo.com/dev2/update-info.html\" style=\"height:40px;width:400px\"></iframe></p>");
     strcat(ptr, "<input type=\"submit\" name=\"main\" value=\"Main-Update\"></input><br><input type=\"submit\" name=\"dev\" value=\"Devel-Update\">");
@@ -1115,6 +1144,7 @@ const char *createUpdateForm(boolean run) {
 const char *handleUpdatePost(AsyncWebServerRequest * request) {
   Serial.println("Handling post request");
   int params = request->params();
+  bool updateFromURL = false;
   for (int i = 0; i < params; i++) {
     String param = request->getParam(i)->name();
     Serial.println(param.c_str());
@@ -1126,8 +1156,40 @@ const char *handleUpdatePost(AsyncWebServerRequest * request) {
       Serial.println("equals main");
       updatePrefix = updatePrefixM;
     }
+    else if (localUpdates && param.equals("local")) {
+      // Local updates permitted. Expect URL as url parameter...
+      updateFromURL = true;
+    }
+    else if (updateFromURL && param.equals("url")) {
+      // Note: strdup allocates memory that is never free'd.
+      // Let's not care about this as we are going to reboot after the update anyway...
+      String localsrc = request->getParam(i)->value();
+      int pos;
+
+      if (-1 != (pos = localsrc.indexOf("://")) ){
+        // strip off http://
+        localsrc = localsrc.substring(pos+3);
+      }
+
+      if (-1 != (pos = localsrc.indexOf("/")) ){
+        // see if there's a directory or updates are in the root
+        String tmp = localsrc.substring(pos);
+        updatePrefix = strdup(tmp.c_str());
+        localsrc = localsrc.substring(0, pos);
+      } else {
+         updatePrefix = strdup("/");
+      }
+
+      if (-1 != (pos = localsrc.indexOf(":"))) {
+        // extract port
+        updatePort = atoi(localsrc.substring(pos+1).c_str());
+        updateHost = strdup(localsrc.substring(0, pos).c_str());
+      } else {
+        updateHost = strdup(localsrc.c_str());
+      }
+    }
   }
-  LOG_I(TAG, "Updating: %supdate.ino.bin\n", updatePrefix);
+  LOG_I(TAG, "Updating: %s%s from %s:%d\n", updatePrefix, updateIno, updateHost, updatePort);
   enterMode(ST_UPDATE);
   return "";
 }
@@ -1200,23 +1262,21 @@ const char *sendGPX(AsyncWebServerRequest * request) {
   return message;
 }
 
-#define SPIFFS LittleFS
-
 const char* PARAM_MESSAGE = "message";
 void SetupAsyncServer() {
   Serial.println("SetupAsyncServer()\n");
   server.reset();
   // Route for root / web page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) {
-    request->send(SPIFFS, "/index.html", String(), false, processor);
+    request->send(LittleFS, "/index.html", String(), false, processor);
   });
 
   server.on("/index.html", HTTP_GET, [](AsyncWebServerRequest * request) {
-    request->send(SPIFFS, "/index.html", String(), false, processor);
+    request->send(LittleFS, "/index.html", String(), false, processor);
   });
 
   server.on("/test.html", HTTP_GET, [](AsyncWebServerRequest * request) {
-    request->send(SPIFFS, "/test.html", String(), false, processor);
+    request->send(LittleFS, "/test.html", String(), false, processor);
   });
 
   server.on("/qrg.html", HTTP_GET,  [](AsyncWebServerRequest * request) {
@@ -1259,10 +1319,10 @@ void SetupAsyncServer() {
     request->send(200, "text/json", createLiveJson());
   });
   server.on("/livemap.html", HTTP_GET, [](AsyncWebServerRequest * request) {
-    request->send(SPIFFS, "/livemap.html", String(), false, processor);
+    request->send(LittleFS, "/livemap.html", String(), false, processor);
   });
   server.on("/livemap.js", HTTP_GET, [](AsyncWebServerRequest * request) {
-    request->send(SPIFFS, "/livemap.js", String(), false, processor);
+    request->send(LittleFS, "/livemap.js", String(), false, processor);
   });
   server.on("/update.html", HTTP_GET,  [](AsyncWebServerRequest * request) {
     request->send(200, "text/html", createUpdateForm(0));
@@ -1287,7 +1347,7 @@ void SetupAsyncServer() {
       request->send(400, "error");
       return;
     }
-    request->send(SPIFFS, filename, "text/plain");
+    request->send(LittleFS, filename, "text/plain");
   });
   
   server.on("/file", HTTP_POST,  [](AsyncWebServerRequest * request) {
@@ -1352,7 +1412,7 @@ void SetupAsyncServer() {
       return;
     }
     const String filename = param->value();
-    File file = SPIFFS.open("/" + filename, "r");
+    File file = LittleFS.open("/" + filename, "r");
     int state = 0;
     request->send("text/html", 0, [state, file, filename](uint8_t *buffer, size_t maxLen, size_t index) mutable -> size_t  {
       LOG_D(TAG, "******* send callback: %d %d %d\n", state, maxLen, index);
@@ -1380,7 +1440,7 @@ void SetupAsyncServer() {
 
   // Route to load style.css file
   server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest * request) {
-    AsyncWebServerResponse *response = request->beginResponse(SPIFFS, "/style.css", "text/css");
+    AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/style.css", "text/css");
     if(response) {
       response->addHeader("Cache-Control", "max-age=86400");
       request->send(response);
@@ -1398,7 +1458,7 @@ void SetupAsyncServer() {
   });
 
   server.on("/upd.html", HTTP_GET, [](AsyncWebServerRequest * request) {
-    request->send(SPIFFS, "/upd.html", String(), false, processor);
+    request->send(LittleFS, "/upd.html", String(), false, processor);
   });
 
   server.on("/status.json", HTTP_GET, [](AsyncWebServerRequest * request) {
@@ -1432,7 +1492,7 @@ void SetupAsyncServer() {
 	const char *type = "text/html";
         if(url.endsWith(".js")) type="text/javascript";
         LOG_D(TAG, "Responding with type %s (url %s)\n", type, url.c_str());
-        AsyncWebServerResponse *response = request->beginResponse(SPIFFS, url, type);
+        AsyncWebServerResponse *response = request->beginResponse(LittleFS, url, type);
         if(response) {
           response->addHeader("Cache-Control", "max-age=900"); 
           request->send(response);
@@ -1838,6 +1898,14 @@ void heap_caps_alloc_failed_hook(size_t requested_size, uint32_t caps, const cha
 }
 #endif
 
+static void enableLocalUpdates() {
+  localUpdates = NULL;
+  File local = LittleFS.open("/localupd.txt", "r");
+  if(local && local.available()) {
+    localUpdates = strdup(readLine(local).c_str());
+  } 
+  LOG_I(TAG, "Local update server for development: %s\n", localUpdates?localUpdates:"<disabled>");
+}
 
 void setup()
 {
@@ -1868,10 +1936,10 @@ void setup()
   sonde.defaultConfig();  // including autoconfiguration
 
   delay(1000);
-  Serial.println("Initializing SPIFFS");
-  // Initialize SPIFFS
-  if (!SPIFFS.begin(true)) {
-    Serial.println("An Error has occurred while mounting SPIFFS");
+  Serial.println("Initializing LittleFS");
+  // Initialize LittleFS
+  if (!LittleFS.begin(true)) {
+    Serial.println("An Error has occurred while mounting LittleFS");
     return;
   }
 
@@ -2051,6 +2119,8 @@ void setup()
 #if FEATURE_SDCARD
   connSDCard.init();
 #endif
+
+  enableLocalUpdates();   // check if local updates from other servers is allowed
 
   WiFi.onEvent(WiFiEvent);
   getKeyPress();    // clear key buffer
@@ -2816,6 +2886,8 @@ void execOTA() {
   bool isValidContentType = false;
   sonde.clearDisplay();
   uint8_t dispxs, dispys;
+  Serial.printf("Updater connecting to: %s:%d%s\n", updateHost, updatePort, updatePrefix);
+
   if ( ISOLED(sonde.config) ) {
     disp.rdis->setFont(FONT_SMALL);
     dispxs = dispys = 1;
@@ -2830,78 +2902,80 @@ void execOTA() {
     disp.rdis->drawString(0, 0, updateHost);
   }
 
-  Serial.print("Connecting to: "); Serial.println(updateHost);
   // Connect to Update host
   if (!client.connect(updateHost, updatePort)) {
-    Serial.println("Connection to " + String(updateHost) + " failed. Please check your setup");
-    return;
+    LOG_E(TAG, "Connection to %s:%d for fs update failed\n", updateHost, updatePort);
+    enterMode(ST_DECODER);
   }
 
-  // First, update file system
-  Serial.println("Fetching fs update");
+  // First, try update file system
+  LOG_I(TAG, "Fetching fs update from '%s:%d' '%s' '%s'\n", updateHost, updatePort, updatePrefix, updateFs);
   disp.rdis->drawString(0, 1 * dispys, "Fetching fs...");
-  client.printf("GET %supdate.fs.bin HTTP/1.1\r\n"
-                "Host: %s\r\n"
+  client.printf("GET %s%s HTTP/1.1\r\n"
+                "Host: %s:%d\r\n"
                 "Cache-Control: no-cache\r\n"
-                "Connection: close\r\n\r\n", updatePrefix, updateHost);
+                "Connection: close\r\n\r\n", updatePrefix, updateFs, updateHost, updatePort);
   // see if we get some data....
 
   int type = 0;
   int res = fetchHTTPheader(&type);
   if (res < 0) {
-    return;
-  }
-  // process data...
-  while (client.available()) {
-    // get header...
-    char fn[128];
-    fn[0] = '/';
-    client.readBytesUntil('\n', fn + 1, 128);
-    char *sz = strchr(fn, ' ');
-    if (!sz) {
-      client.stop();
-      return;
-    }
-    *sz = 0;
-    int len = atoi(sz + 1);
-    LOG_I(TAG, "Updating file %s (%d bytes)\n", fn, len);
-    char fnstr[17];
-    memset(fnstr, ' ', 16);
-    strncpy(fnstr, fn, 16);
-    fnstr[16] = 0;
-    disp.rdis->drawString(0, 2 * dispys, fnstr);
-    File f = SPIFFS.open(fn, FILE_WRITE);
-    // read sz bytes........
-    while (len > 0) {
-      unsigned char buf[1024];
-      int r = client.read(buf, len > 1024 ? 1024 : len);
-      if (r == -1) {
+    ; // no-op
+  } else {
+    // process data...
+    while (client.available()) {
+      // get header...
+      char fn[128];
+      fn[0] = '/';
+      client.readBytesUntil('\n', fn + 1, 128);
+      char *sz = strchr(fn, ' ');
+      if (!sz) {
         client.stop();
+        enterMode(ST_DECODER);
         return;
       }
-      f.write(buf, r);
-      len -= r;
+      *sz = 0;
+      int len = atoi(sz + 1);
+      LOG_I(TAG, "Updating file %s (%d bytes)\n", fn, len);
+      char fnstr[17];
+      memset(fnstr, ' ', 16);
+      strncpy(fnstr, fn, 16);
+      fnstr[16] = 0;
+      disp.rdis->drawString(0, 2 * dispys, fnstr);
+      File f = LittleFS.open(fn, FILE_WRITE);
+      // read sz bytes........
+      while (len > 0) {
+        unsigned char buf[1024];
+        int r = client.read(buf, len > 1024 ? 1024 : len);
+        if (r == -1) {
+          client.stop();
+          enterMode(ST_DECODER);
+          return;
+        }
+        f.write(buf, r);
+        len -= r;
+      }
     }
+    client.stop();
   }
-  client.stop();
 
-  Serial.print("Connecting to: "); Serial.println(updateHost);
   // Connect to Update host
   if (!client.connect(updateHost, updatePort)) {
-    Serial.println("Connection to " + String(updateHost) + " failed. Please check your setup");
+    LOG_E(TAG, "Connection to %s:%d for app update failed\n", updateHost, updatePort);
+    enterMode(ST_DECODER);
     return;
   }
 
   // Connection succeeded, fecthing the bin
-  LOG_I(TAG, "Fetching bin: %supdate.ino.bin\n", updatePrefix);
+  LOG_I(TAG, "Fetching bin update from '%s:%d' '%s' '%s'", updateHost, updatePort, updatePrefix, updateIno);
   disp.rdis->drawString(0, 3 * dispys, "Fetching update");
 
   // Get the contents of the bin file
-  client.printf("GET %supdate.ino.bin HTTP/1.1\r\n"
-                "Host: %s\r\n"
+  client.printf("GET %s%s HTTP/1.1\r\n"
+                "Host: %s:%d\r\n"
                 "Cache-Control: no-cache\r\n"
                 "Connection: close\r\n\r\n",
-                updatePrefix, updateHost);
+                updatePrefix, updateIno, updateHost, updatePort);
 
   // Check what is being sent
   //    Serial.print(String("GET ") + bin + " HTTP/1.1\r\n" +
@@ -2914,7 +2988,7 @@ void execOTA() {
   if (validType == 1) isValidContentType = true;
 
   // Check what is the contentLength and if content type is `application/octet-stream`
-  Serial.println("contentLength : " + String(contentLength) + ", isValidContentType : " + String(isValidContentType));
+  Serial.printf("contentLength : %d, isValidContentType : %d\n",contentLength, isValidContentType);
   disp.rdis->drawString(0, 4 * dispys, "Len: ");
   String cls = String(contentLength);
   disp.rdis->drawString(5 * dispxs, 4 * dispys, cls.c_str());
@@ -3023,16 +3097,18 @@ int fetchHTTPheader(int *validType) {
 
     // extract headers here
     // Start with content length
-    if (line.startsWith("Content-Length: ")) {
-      contentLength = atoi((getHeaderValue(line, "Content-Length: ")).c_str());
+    static const char *HEADER_CL = "Content-Length: ";
+    if (strncasecmp( line.c_str(), HEADER_CL, strlen(HEADER_CL) ) == 0 ) {
+      contentLength = atoi( line.c_str() + strlen(HEADER_CL) );
       Serial.println("Got " + String(contentLength) + " bytes from server");
     }
 
     // Next, the content type
-    if (line.startsWith("Content-Type: ")) {
-      String contentType = getHeaderValue(line, "Content-Type: ");
-      Serial.println("Got " + contentType + " payload.");
-      if (contentType == "application/octet-stream") {
+    static const char *HEADER_CT = "Content-Type: ";
+    if (strncasecmp( line.c_str(), HEADER_CT, strlen(HEADER_CT) ) == 0 ) {
+      const char *contentType = line.c_str() + strlen(HEADER_CT);
+      LOG_I(TAG, "Content type: %s\n", contentType);
+      if (strcmp(contentType, "application/octet-stream")==0) {
         if (validType) *validType = 1;
       }
     }
