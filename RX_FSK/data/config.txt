@@ -128,6 +128,7 @@ mqtt.port=1883
 mqtt.username=
 mqtt.password=
 mqtt.prefix=rdz_sonde_server/
+mqtt.report_interval=60000
 #-------------------------------#
 # Sondehub v2 settings
 #-------------------------------#

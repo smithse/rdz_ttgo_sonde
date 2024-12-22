@@ -220,6 +220,7 @@ struct st_mqtt {
 	char username[64];
 	char password[64];
 	char prefix[64];
+	int report_interval;
 };
 
 struct st_cm {
