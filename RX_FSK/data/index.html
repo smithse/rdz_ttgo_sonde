@@ -24,7 +24,6 @@
 </div>
 
 <div id="Home" class="tabcontent">
-<div class="tci">
 <div class="system-info">
 <h1>%VERSION_NAME% version %VERSION_ID%</h1>
 <p>Copyright &copy; 2019-2024 by Hansi Reiser, DL9RDZ and contributors</p>
@@ -50,17 +49,18 @@
  </tr>
 </tbody>
 </table>
-</div>
+
+<!--</div>
 <div class="external-links">
-<h2>External Sites</h2>
+-->
+<h2 class="external-links">External Sites</h2>
 <div class="link-buttons">
  <a href="https://www.wettersonde.net" target="_blank" class="button">wettersonde.net</a>
  <a href="https://www.radiosondy.info" target="_blank" class="button">radiosondy.info</a>
  <a href="https://www.sondehub.org" target="_blank" class="button">sondehub.org</a>
 </div>
 </div>
-</div>
-<div class="footer"><span></span><span class="ttgoinfo">rdzTTGOserver %VERSION_ID%</span></div>
+<div class="footer"><span class="ttgoinfo" id="userinfo"></span><span class="ttgoinfo">rdzTTGOserver %VERSION_ID%</span></div>
 
 </div>
 
@@ -83,7 +83,7 @@
 <div id="Control" class="tabcontent" data-src="control.html">
 	<iframe class="tci" src="" ></iframe>
 </div>
-
+</div>
 <script>
 function fetchStatus() {
   fetch('/status.json')
@@ -147,6 +147,21 @@ function myFunction() {
   }
 }
 document.getElementById("defaultTab").click();
+
+const sessionC  = document.cookie.split("; ").find((row) => row.startsWith("SESSION="))?.split("=")[1];
+if(sessionC) {
+  const [user] = sessionC.split(':');
+  document.getElementById("userinfo").innerHTML = `User: ${user} <a href="#" id="logoutLink" style="margin-left: 10px; color: white;">Logout</a>`;
+  const logoutLink = document.getElementById("logoutLink");
+  logoutLink.addEventListener("click", function(event) {
+     event.preventDefault(); // Prevent default link behavior
+     document.cookie = `SESSION=; expires:Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+     location.reload(); // Reload the page
+  });
+} else {
+  document.getElementById("userinfo").innerHTML = `<a style="color: white;" href="login.html">Login</a>`;
+}
+
 </script>
 
 </body>

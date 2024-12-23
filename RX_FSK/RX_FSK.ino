@@ -38,6 +38,7 @@
 #include "src/posinfo.h"
 
 #include "src/pmu.h"
+#include "src/user.h"
 
 
 /* Data exchange connectors */
@@ -252,6 +253,12 @@ String processor(const String& var) {
     if(localUpdates) return String(localUpdates);
     else return String();
   }
+  if (var == "PREAUTH") {
+    char preauth[COOKIE_SIZE];
+    generateRandomCookie("preauth",preauth);
+    storeCookie(preauth, -1);  // preauth value
+    return String(preauth);
+  }
   return String();
 }
 
@@ -350,6 +357,38 @@ void HTMLSAVEBUTTON(char *ptr) {
          "<span class=\"ttgoinfo\">rdzTTGOserver ");
   strcat(ptr, version_id);
   strcat(ptr, "</span>");
+}
+
+const char *handleLoginPost(AsyncWebServerRequest * request) {
+  LOG_D(TAG, "Handling login POST request");
+
+  AsyncWebParameter *userp = request->getParam("user", true, false);
+  AsyncWebParameter *authp = request->getParam("auth", true, false);
+  AsyncWebParameter *preauthp= request->getParam("preauth", true, false);
+  if (!userp || !authp || !preauthp) {
+    request->send(400, "text/plain", "Invalid Request");
+    return nullptr;
+  }
+
+  String username = userp->value();
+  String preauth = preauthp->value();
+  String auth = authp->value();
+
+  if (isValidUser(username.c_str(), preauth.c_str(), auth.c_str())) {
+    // Generate a new session cookie
+    char cookie[COOKIE_SIZE];
+    generateRandomCookie(username.c_str(), cookie);
+    if(upgradeCookie(preauth.c_str(), cookie, 1)==0) {
+      // Set cookie and redirect
+      AsyncWebServerResponse *response = request->beginResponse(302);
+      response->addHeader("Location","/index.html");
+      response->addHeader("Set-Cookie", "SESSION=" + String(cookie) + "; Path=/; SameSite=Strict");
+      request->send(response);
+      return nullptr;
+    }
+  }
+  request->send(401, "text/plain", "Invalid credentials or session expired");
+  return nullptr;
 }
 
 const char *createQRGForm() {
@@ -1339,6 +1378,13 @@ void SetupAsyncServer() {
   server.on("/control.html", HTTP_POST, [](AsyncWebServerRequest * request) {
     handleControlPost(request);
     request->send(200, "text/html", createControlForm());
+  });
+
+  server.on("/login.html", HTTP_GET, [](AsyncWebServerRequest * request) {
+    request->send(LittleFS, "/login.html", String(), false, processor);
+  });
+  server.on("/login.html", HTTP_POST, [](AsyncWebServerRequest * request) {
+    handleLoginPost(request);
   });
 
   server.on("/file", HTTP_GET,  [](AsyncWebServerRequest * request) {
