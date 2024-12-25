@@ -42,7 +42,7 @@ void ConnSDCard::init() {
   Serial.printf("SD card init: %s\n", initok ? "OK" : "Failed");
   uint8_t cardType = SD.cardType();
   Serial.printf("SD Card Type: %s\n", cardTypeStr(cardType));
-  if (cardType == CARD_NONE) { return; }
+  if (cardType == CARD_NONE) { SPI_MUTEX_UNLOCK(); return; }
 
   uint32_t cardSize = SD.cardSize() / (1024 * 1024);
   Serial.printf("SD Card Size: %luMB\n", cardSize);
