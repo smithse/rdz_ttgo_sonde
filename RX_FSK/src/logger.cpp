@@ -15,6 +15,10 @@ extern const char *version_id;
 
 const char *lvlcol[]={RED, YEL, GRN, BLU};
 
+void Logger::init() {
+	sonde.config.debug = 3; // Use as initial value until config file is read from file system
+}
+
 void Logger::logf(LOGLEVEL lvl, const char *module, const char *fmt, ...) {
 	int color = sonde.config.debug >= 10 ? 1 : 0;
 	int cfglvl = sonde.config.debug - 10*color;

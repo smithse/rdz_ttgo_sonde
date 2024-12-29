@@ -1960,6 +1960,7 @@ void setup()
 
   // Open serial communications and wait for port to open:
   Serial.begin(115200);
+  Log.init();
 
   for (int i = 0; i < 39; i++) {
     int v = gpio_get_level((gpio_num_t)i);
@@ -2667,7 +2668,9 @@ void wifiConnect(int16_t res) {
   }
   WiFi.scanDelete();
   if (bestEntry >= 0) {
-    LOG_D(TAG, "WiFi Connecting BSSID: %02X:%02X:%02X:%02X:%02X:%02X SSID: %s PW %s Channel: %d (RSSI %d)\n", bestBSSID[0], bestBSSID[1], bestBSSID[2], bestBSSID[3], bestBSSID[4], bestBSSID[5], fetchWifiSSID(bestEntry), fetchWifiPw(bestEntry), bestChannel, bestRSSI);
+    LOG_D(TAG, "WiFi Connecting BSSID: %02X:%02X:%02X:%02X:%02X:%02X SSID: %s PW %s Channel: %d (RSSI %d)\n",
+      bestBSSID[0], bestBSSID[1], bestBSSID[2], bestBSSID[3], bestBSSID[4], bestBSSID[5],
+      fetchWifiSSID(bestEntry), fetchWifiPw(bestEntry), bestChannel, bestRSSI);
     wifi_state = WIFI_CONNECT;
     WiFi.begin(fetchWifiSSID(bestEntry), fetchWifiPw(bestEntry), bestChannel, bestBSSID);
   } else {
@@ -2812,7 +2815,8 @@ void loopWifiScan() {
   wifi_state = WIFI_DISABLED;
   disp.rdis->setFont(FONT_SMALL);
   uint8_t dispw, disph, dispxs, dispys;
-  disp.rdis->getDispSize(&disph, &dispw, &dispxs, &dispys);
+  disp.rdis->getDispSize(&disph, &dispw, &dispys, &dispxs);
+  int dwidth = dispw / dispxs;
   int lastl = (disph / dispys - 2) * dispys;
   int cnt = 0;
   char abort = 0; // abort on keypress
@@ -2846,7 +2850,7 @@ void loopWifiScan() {
     int n = WiFi.scanNetworks();
     for (int i = 0; i < n; i++) {
       String ssid = WiFi.SSID(i);
-      disp.rdis->drawString(0, dispys * (1 + line), ssid.c_str());
+      disp.rdis->drawString(0, dispys * (1 + line), ssid.c_str(), dwidth);
       line = (line + 1) % (disph / dispys);
       String mac = WiFi.BSSIDstr(i);
       const char *encryptionTypeDescription = translateEncryptionType(WiFi.encryptionType(i));
