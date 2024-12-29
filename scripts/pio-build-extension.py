@@ -38,6 +38,10 @@ env.AddCustomTarget(
 # After generating the elf file, generate fonts.bin as well
 env.AddPostAction("$PROGPATH", 
   env.VerboseAction(" ".join([
+    "xtensa-esp32-elf-g++", "-fno-lto", "-c", "RX_FSK/src/fonts/fonts.cpp", "-o", "$BUILD_DIR/src/src/fonts/fonts.cpp.o" ]),
+    "Building $BUILD_DIR/fonts.bin"))
+env.AddPostAction("$PROGPATH", 
+  env.VerboseAction(" ".join([
     "xtensa-esp32-elf-ld", "-T", "fontlink.ld", "--oformat=binary", "-o", "$BUILD_DIR/fonts.bin", "$BUILD_DIR/src/src/fonts/fonts.cpp.o" ]),
     "Building $BUILD_DIR/fonts.bin"))
 
