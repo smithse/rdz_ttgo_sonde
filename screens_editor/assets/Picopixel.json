@@ -1,0 +1,951 @@
+{
+    "bitmap": [
+        232,
+        180,
+        87,
+        213,
+        245,
+        0,
+        78,
+        62,
+        128,
+        165,
+        74,
+        74,
+        90,
+        80,
+        192,
+        106,
+        64,
+        149,
+        128,
+        170,
+        128,
+        93,
+        0,
+        96,
+        224,
+        128,
+        37,
+        72,
+        86,
+        212,
+        117,
+        64,
+        197,
+        78,
+        197,
+        28,
+        151,
+        146,
+        243,
+        28,
+        83,
+        84,
+        229,
+        72,
+        85,
+        84,
+        85,
+        148,
+        160,
+        70,
+        100,
+        227,
+        128,
+        152,
+        197,
+        4,
+        86,
+        198,
+        87,
+        218,
+        215,
+        92,
+        114,
+        70,
+        214,
+        220,
+        243,
+        206,
+        243,
+        72,
+        114,
+        212,
+        183,
+        218,
+        248,
+        36,
+        212,
+        187,
+        90,
+        146,
+        78,
+        142,
+        235,
+        88,
+        128,
+        157,
+        185,
+        144,
+        86,
+        212,
+        215,
+        72,
+        86,
+        212,
+        64,
+        215,
+        90,
+        113,
+        28,
+        233,
+        36,
+        182,
+        212,
+        182,
+        164,
+        140,
+        107,
+        85,
+        0,
+        181,
+        90,
+        181,
+        36,
+        229,
+        78,
+        234,
+        192,
+        145,
+        18,
+        213,
+        192,
+        84,
+        240,
+        144,
+        199,
+        240,
+        147,
+        94,
+        113,
+        128,
+        37,
+        222,
+        94,
+        48,
+        110,
+        128,
+        119,
+        156,
+        147,
+        90,
+        184,
+        69,
+        96,
+        146,
+        234,
+        170,
+        64,
+        213,
+        106,
+        214,
+        128,
+        85,
+        0,
+        215,
+        64,
+        117,
+        144,
+        232,
+        113,
+        224,
+        186,
+        64,
+        181,
+        128,
+        181,
+        0,
+        141,
+        84,
+        170,
+        128,
+        172,
+        224,
+        229,
+        112,
+        106,
+        38,
+        252,
+        200,
+        172,
+        90
+    ],
+    "glyphs": [
+        {
+            "bitmapOffset": 0,
+            "width": 0,
+            "height": 0,
+            "xAdvance": 2,
+            "xOffset": 0,
+            "yOffset": 1
+        },
+        {
+            "bitmapOffset": 0,
+            "width": 1,
+            "height": 5,
+            "xAdvance": 2,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 1,
+            "width": 3,
+            "height": 2,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 2,
+            "width": 5,
+            "height": 5,
+            "xAdvance": 6,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 6,
+            "width": 3,
+            "height": 6,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 9,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 11,
+            "width": 4,
+            "height": 5,
+            "xAdvance": 5,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 14,
+            "width": 1,
+            "height": 2,
+            "xAdvance": 2,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 15,
+            "width": 2,
+            "height": 5,
+            "xAdvance": 3,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 17,
+            "width": 2,
+            "height": 5,
+            "xAdvance": 3,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 19,
+            "width": 3,
+            "height": 3,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -3
+        },
+        {
+            "bitmapOffset": 21,
+            "width": 3,
+            "height": 3,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -3
+        },
+        {
+            "bitmapOffset": 23,
+            "width": 2,
+            "height": 2,
+            "xAdvance": 3,
+            "xOffset": 0,
+            "yOffset": 0
+        },
+        {
+            "bitmapOffset": 24,
+            "width": 3,
+            "height": 1,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -2
+        },
+        {
+            "bitmapOffset": 25,
+            "width": 1,
+            "height": 1,
+            "xAdvance": 2,
+            "xOffset": 0,
+            "yOffset": 0
+        },
+        {
+            "bitmapOffset": 26,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 28,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 30,
+            "width": 2,
+            "height": 5,
+            "xAdvance": 3,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 32,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 34,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 36,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 38,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 40,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 42,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 44,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 46,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 48,
+            "width": 1,
+            "height": 3,
+            "xAdvance": 2,
+            "xOffset": 0,
+            "yOffset": -3
+        },
+        {
+            "bitmapOffset": 49,
+            "width": 2,
+            "height": 4,
+            "xAdvance": 3,
+            "xOffset": 0,
+            "yOffset": -3
+        },
+        {
+            "bitmapOffset": 50,
+            "width": 2,
+            "height": 3,
+            "xAdvance": 3,
+            "xOffset": 0,
+            "yOffset": -3
+        },
+        {
+            "bitmapOffset": 51,
+            "width": 3,
+            "height": 3,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -3
+        },
+        {
+            "bitmapOffset": 53,
+            "width": 2,
+            "height": 3,
+            "xAdvance": 3,
+            "xOffset": 0,
+            "yOffset": -3
+        },
+        {
+            "bitmapOffset": 54,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 56,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 58,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 60,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 62,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 64,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 66,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 68,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 70,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 72,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 74,
+            "width": 1,
+            "height": 5,
+            "xAdvance": 2,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 75,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 77,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 79,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 81,
+            "width": 5,
+            "height": 5,
+            "xAdvance": 6,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 85,
+            "width": 4,
+            "height": 5,
+            "xAdvance": 5,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 88,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 90,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 92,
+            "width": 3,
+            "height": 6,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 95,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 97,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 99,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 101,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 103,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 105,
+            "width": 5,
+            "height": 5,
+            "xAdvance": 6,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 109,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 111,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 113,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 115,
+            "width": 2,
+            "height": 5,
+            "xAdvance": 3,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 117,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 119,
+            "width": 2,
+            "height": 5,
+            "xAdvance": 3,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 121,
+            "width": 3,
+            "height": 2,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 122,
+            "width": 4,
+            "height": 1,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": 1
+        },
+        {
+            "bitmapOffset": 123,
+            "width": 2,
+            "height": 2,
+            "xAdvance": 3,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 124,
+            "width": 3,
+            "height": 4,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -3
+        },
+        {
+            "bitmapOffset": 126,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 128,
+            "width": 3,
+            "height": 3,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -2
+        },
+        {
+            "bitmapOffset": 130,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 132,
+            "width": 3,
+            "height": 4,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -3
+        },
+        {
+            "bitmapOffset": 134,
+            "width": 2,
+            "height": 5,
+            "xAdvance": 3,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 136,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -3
+        },
+        {
+            "bitmapOffset": 138,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 140,
+            "width": 1,
+            "height": 5,
+            "xAdvance": 2,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 141,
+            "width": 2,
+            "height": 6,
+            "xAdvance": 3,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 143,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 145,
+            "width": 2,
+            "height": 5,
+            "xAdvance": 3,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 147,
+            "width": 5,
+            "height": 3,
+            "xAdvance": 6,
+            "xOffset": 0,
+            "yOffset": -2
+        },
+        {
+            "bitmapOffset": 149,
+            "width": 3,
+            "height": 3,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -2
+        },
+        {
+            "bitmapOffset": 151,
+            "width": 3,
+            "height": 3,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -2
+        },
+        {
+            "bitmapOffset": 153,
+            "width": 3,
+            "height": 4,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -2
+        },
+        {
+            "bitmapOffset": 155,
+            "width": 3,
+            "height": 4,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -2
+        },
+        {
+            "bitmapOffset": 157,
+            "width": 2,
+            "height": 3,
+            "xAdvance": 3,
+            "xOffset": 0,
+            "yOffset": -2
+        },
+        {
+            "bitmapOffset": 158,
+            "width": 3,
+            "height": 4,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -3
+        },
+        {
+            "bitmapOffset": 160,
+            "width": 2,
+            "height": 5,
+            "xAdvance": 3,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 162,
+            "width": 3,
+            "height": 3,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -2
+        },
+        {
+            "bitmapOffset": 164,
+            "width": 3,
+            "height": 3,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -2
+        },
+        {
+            "bitmapOffset": 166,
+            "width": 5,
+            "height": 3,
+            "xAdvance": 6,
+            "xOffset": 0,
+            "yOffset": -2
+        },
+        {
+            "bitmapOffset": 168,
+            "width": 3,
+            "height": 3,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -2
+        },
+        {
+            "bitmapOffset": 170,
+            "width": 3,
+            "height": 4,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -2
+        },
+        {
+            "bitmapOffset": 172,
+            "width": 3,
+            "height": 4,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -3
+        },
+        {
+            "bitmapOffset": 174,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 176,
+            "width": 1,
+            "height": 6,
+            "xAdvance": 2,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 177,
+            "width": 3,
+            "height": 5,
+            "xAdvance": 4,
+            "xOffset": 0,
+            "yOffset": -4
+        },
+        {
+            "bitmapOffset": 179,
+            "width": 4,
+            "height": 2,
+            "xAdvance": 5,
+            "xOffset": 0,
+            "yOffset": -3
+        }
+    ],
+    "font": {
+        "firstChar": 32,
+        "lastChar": 126,
+        "yAdvance": 7
+    }
+}
