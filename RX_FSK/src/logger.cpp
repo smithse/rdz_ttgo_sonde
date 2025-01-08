@@ -6,7 +6,9 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
 
+#if USE_BAD_DEBUGGING_CODE
 extern WiFiUDP udp;
+#endif
 
 extern boolean connected;
 
@@ -57,10 +59,12 @@ void Logger::sendImprov(int type, int len, const char *data) {
     buf[9+len+1] = '\n';
     buf[9+len+2] = 0;
     Serial.write(buf, 9+len+2);
+#if USE_BAD_DEBUGGING_CODE
             udp.beginPacket("192.168.1.3", 12345);
 	    udp.write((const uint8_t *)"Reply:",6);
             udp.write((const uint8_t *)buf, 9+len+2);
             udp.endPacket();
+#endif
 }
 
 void Logger::sendImprovResult(int replyto, const char *strings[]) {
@@ -89,10 +93,12 @@ void Logger::sendImprovResult(int replyto, const char *strings[]) {
     buf[i++] = '\n';
     buf[i++] = 0; 
     Serial.write(buf, i-1);
+#if USE_BAD_DEBUGGING_CODE
             udp.beginPacket("192.168.1.3", 12345);
 	    udp.write((const uint8_t *)"Reply:",6);
             udp.write((const uint8_t *)buf, i-1);
             udp.endPacket();
+#endif
 }
 
 int cmdlen = 0;
@@ -131,9 +137,11 @@ void Logger::handleImprov() {
     while(Serial.available()) {
         cmd[cmdlen] = Serial.read();
         if(cmd[cmdlen] == '\n') { // check if command
+#if USE_BAD_DEBUGGING_CODE
             udp.beginPacket("192.168.1.3", 12345);
             udp.write((const uint8_t *)cmd, cmdlen+1);
             udp.endPacket();
+#endif
             if(strncmp(cmd, "IMPROV", 6)==0) {  // we have a command
                 // TODO: CHeck CRC
                 if(cmd[7]==0x03 && cmd[9]==0x03) { // RPC, get info
