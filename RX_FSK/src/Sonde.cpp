@@ -34,7 +34,7 @@ const char *manufacturer_string[]={"Graw", "Vaisala", "Vaisala", "Meteomodem", "
 // tiny library printf does not support $ parameters, so remove....
 // for now, only urls with the right order of parameters are supported, this maybe will change in the future again.
 //const char *DEFEPH="gssc.esa.int/gnss/data/daily/%1$04d/brdc/brdc%2$03d0.%3$02dn.gz";
-const char *DEFEPH="gssc.esa.int/gnss/data/daily/%04d/brdc/brdc%03d0.%02dn.gz";
+const char *DEFEPH="gssc.esa.int/cddis/gnss/data/daily/%04d/brdc/brdc%03d0.%02dn.gz";
 
 int fingerprintValue[]={ 17, 31, 64, 4, 55, 48, 23, 128+23, 119, 128+119, 95, 79, -1 };
 const char *fingerprintText[]={
