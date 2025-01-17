@@ -42,6 +42,9 @@
 
 
 /* Data exchange connectors */
+#if FEATURE_SONDESEEKER
+#include "src/conn-sondeseeker.h"
+#endif
 #if FEATURE_CHASEMAPPER
 #include "src/conn-chasemapper.h"
 #endif
@@ -70,6 +73,9 @@ Conn *connectors[] = { &connSystem,
 #endif
 #if FEATURE_CHASEMAPPER
 &connChasemapper,
+#endif
+#if FEATURE_SONDESEEKER
+&connSondeseeker,
 #endif
 #if FEATURE_MQTT
 &connMQTT,
@@ -752,6 +758,12 @@ struct st_configitems config_list[] = {
   {"cm.active", -3, &sonde.config.cm.active},
   {"cm.host", 63, &sonde.config.cm.host},
   {"cm.port", 0, &sonde.config.cm.port},
+#endif
+#if FEATURE_SONDESEEKER
+  /* Sondeseeker settings */
+  {"ss.active", -3, &sonde.config.ss.active},
+  {"ss.host", 63, &sonde.config.ss.host},
+  {"ss.port", 0, &sonde.config.ss.port},
 #endif
 #if FEATURE_MQTT
   /* MQTT */
@@ -2311,6 +2323,9 @@ void loopDecoder() {
 #endif
 #if FEATURE_CHASEMAPPER
       connChasemapper.updateSonde( s );
+#endif
+#if FEATURE_SONDESEEKER
+      connSondeseeker.updateSonde( s );
 #endif
     }
 #if FEATURE_SONDEHUB
