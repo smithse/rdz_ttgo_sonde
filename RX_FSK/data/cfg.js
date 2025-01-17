@@ -63,7 +63,7 @@ var cfgs = [
 [ "cm.active", "Chasemapper active (0=disabled, 1=active)"],
 [ "cm.host", "Chasemapper UDP host"],
 [ "cm.port", "Chasemapper UDP port"],
-[ "", "Chasemapper settings", "https://github.com/dl9rdz/rdz_ttgo_sonde/wiki/Sondeseeker-configuration"],
+[ "", "SondeSeeker settings", "https://github.com/dl9rdz/rdz_ttgo_sonde/wiki/Sondeseeker-configuration"],
 [ "ss.active", "Sondeseeker active (0=disabled, 1=active)"],
 [ "ss.host", "Sondeseeker UDP host"],
 [ "ss.port", "Sondeseeker UDP port"],
