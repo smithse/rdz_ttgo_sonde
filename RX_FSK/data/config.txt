@@ -71,7 +71,7 @@ marker=1
 # APRS settings
 #-------------------------------#
 call=N0CALL
-passcode=12345
+passcode=-1
 #-------------------------------#
 # Sonde specific settings: bandwidth
 # valid values: 3100, 3900, 5200, 6300, 7800, 10400, 12500,
@@ -146,6 +146,12 @@ sondehub.fiactive=0
 sondehub.fiinterval=60
 sondehub.fimaxdist=150
 sondehub.fimaxage=6
+#-------------------------------#
+# SondeSeeker settings
+#-------------------------------#
+ss.active=1
+ss.host=224.0.0.0
+ss.port=62655
 #-------------------------------#
 # EOF
 #-------------------------------#

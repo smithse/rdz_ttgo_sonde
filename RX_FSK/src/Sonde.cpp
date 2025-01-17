@@ -301,7 +301,7 @@ void Sonde::defaultConfig() {
 	}
 	//
 	config.noisefloor = -125;
-	strcpy(config.call,"NOCALL");
+	strcpy(config.call,"N0CALL");
 	config.passcode = -1;
 	strcpy(config.mdnsname, "rdzsonde");
 	config.maxsonde=15;
@@ -343,6 +343,10 @@ void Sonde::defaultConfig() {
 	strcpy(config.mqtt.password, "/0");
 	strcpy(config.mqtt.prefix, "rdz_sonde_server/");
 	config.mqtt.report_interval = 60000;
+
+	config.ss.active = 0;
+	config.ss.port = 1883;
+	strcpy(config.ss.host, "224.0.0.0");
 }
 
 extern struct st_configitems config_list[];
