@@ -101,7 +101,7 @@ var cfgs = [
 [ "power_pout", "Power control port"],
 [ "led_pout", "LED output port"],
 [ "gps_rxd", "GPS RXD pin (-1 to disable)"],
-[ "gps_txd", "GPS TXD pin (optional, only for GSP reset)"],
+[ "gps_txd", "GPS TXD pin (optional, only for GPS reset)"],
 [ "batt_adc", "Battery measurement pin"],
 [ "sx1278_ss", "SX1278 SS"],
 [ "sx1278_miso", "SX1278 MISO"],
@@ -110,7 +110,7 @@ var cfgs = [
 ];
 
 var tocheck = ["sd.cs", "sd.miso", "sd.mosi", "sd.clk", "oled_sda", "oled_scl", "oled_rst", "tft_rs", "tft_cs", "tft_spifreq", "button_pin", "button2_pin", 
-  "led_pout", "gps_rxd", "gps_txd", "batt_adc", "sx1278_ss", "sx1278_miso", "sx1278_mosi", "sx1278_sck"];
+  "led_pout", "gps_rxd", "gps_txd", "batt_adc", "sx1278_ss", "sx1278_miso", "sx1278_mosi", "sx1278_sck", "ss.host", "cm.host"];
 var alloweddups = [ ["sd.mosi", "oled_sda"], ["sd.clk", "oled_scl" ] ];
 
 function isAllowedDup(nameA, nameB) {
