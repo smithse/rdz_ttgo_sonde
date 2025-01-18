@@ -344,9 +344,9 @@ void Sonde::defaultConfig() {
 	strcpy(config.mqtt.prefix, "rdz_sonde_server/");
 	config.mqtt.report_interval = 60000;
 
-	config.ss.active = 0;
-	config.ss.port = 1883;
-	strcpy(config.ss.host, "224.0.0.0");
+	config.ss.active = 1;
+	strcpy(config.ss.host, "255.255.255.255");
+	config.ss.port = 62655;
 }
 
 extern struct st_configitems config_list[];

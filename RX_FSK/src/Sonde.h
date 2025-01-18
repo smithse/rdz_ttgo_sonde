@@ -242,7 +242,7 @@ struct st_sondehub {
 	char callsign[64];
 	char antenna[64];
 	char email[64];
-        int fiactive;
+    int fiactive;
 	int fiinterval;
 	int fimaxdist;
 	double fimaxage;
@@ -305,7 +305,7 @@ typedef struct st_rdzconfig {
 	int noisefloor;			// for spectrum display
 	char mdnsname[15];		// mDNS-Name, defaults to rdzsonde
 	// receiver configuration
-	int freqofs;			// frequency offset (tuner config = rx frequency + freqofs) in Hz
+	int freqofs;				// frequency offset (tuner config = rx frequency + freqofs) in Hz
 	struct st_rs41config rs41;	// configuration options specific for RS41 receiver
 	struct st_rs92config rs92;
 	struct st_dfmconfig dfm;
@@ -315,14 +315,14 @@ typedef struct st_rdzconfig {
 	// data feed configuration
 	// for now, one feed for each type is enough, but might get extended to more?
 	char call[10];			// APRS callsign
-	int passcode;		// APRS passcode
+	int passcode;			// APRS passcode
 	int chase;
 	char objcall[10];		// APRS object call (for wettersonde.net)
 	char beaconsym[5];		// APRS beacon symbol
 	char comment[32];
 	struct st_axudpinfo udpfeed;	// target for AXUDP messages
-	struct st_aprsinfo tcpfeed;	// target for APRS-IS TCP connections
-	struct st_kisstnc kisstnc;	// target for KISS TNC (via TCP, mainly for APRSdroid)
+	struct st_aprsinfo tcpfeed;		// target for APRS-IS TCP connections
+	struct st_kisstnc kisstnc;		// target for KISS TNC (via TCP, mainly for APRSdroid)
 	struct st_mqtt mqtt;
 	struct st_sondehub sondehub;
 	struct st_cm cm;
@@ -341,7 +341,6 @@ struct st_configitems {
 // defined in RX_FSK.ino
 extern struct st_configitems config_list[];
 extern const int N_CONFIG;
-
 
 #define MAXSONDE 50
 
@@ -398,8 +397,8 @@ public:
 	void updateDisplayIP();
 	void updateDisplay();
 	void clearDisplay();
-        void dispsavectlON();
-        void dispsavectlOFF(int rxactive);
+    void dispsavectlON();
+	void dispsavectlOFF(int rxactive);
 
 	void setIP(String ip, bool isAP);
 };
@@ -407,4 +406,3 @@ public:
 extern Sonde sonde;
 
 #endif
-

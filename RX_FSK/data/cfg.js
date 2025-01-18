@@ -72,7 +72,7 @@ var cfgs = [
 [ "sondehub.chase", "SondeHub location reporting (0=off, 1=fixed, 2=chase/GPS, 3=auto)"],
 [ "sondehub.host", "SondeHub host (DO NOT CHANGE)"],
 [ "sondehub.callsign", "Callsign"],
-[ "sondehub.antenna", "Antenna (optional, visisble on SondeHub tracker)"],
+[ "sondehub.antenna", "Antenna (optional, visible on SondeHub tracker)"],
 [ "sondehub.email", "SondeHub email (optional, only used to contact in case of upload errors)"],
 [ "", "SondeHub frequency import", "https://github.com/dl9rdz/rdz_ttgo_sonde/wiki/SondeHub-import" ],
 [ "sondehub.fiactive", "SondeHub frequency import active (0=disabled, 1=active)" ],
@@ -110,7 +110,7 @@ var cfgs = [
 ];
 
 var tocheck = ["sd.cs", "sd.miso", "sd.mosi", "sd.clk", "oled_sda", "oled_scl", "oled_rst", "tft_rs", "tft_cs", "tft_spifreq", "button_pin", "button2_pin", 
-  "led_pout", "gps_rxd", "gps_txd", "batt_adc", "sx1278_ss", "sx1278_miso", "sx1278_mosi", "sx1278_sck", "ss.host", "cm.host"];
+  "led_pout", "gps_rxd", "gps_txd", "batt_adc", "sx1278_ss", "sx1278_miso", "sx1278_mosi", "sx1278_sck"];
 var alloweddups = [ ["sd.mosi", "oled_sda"], ["sd.clk", "oled_scl" ] ];
 
 function isAllowedDup(nameA, nameB) {

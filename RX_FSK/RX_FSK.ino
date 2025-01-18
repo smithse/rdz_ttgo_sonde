@@ -695,6 +695,7 @@ void setupConfigData() {
   while (file.available()) {
     String line = readLine(file);  //file.readStringUntil('\n');
     sonde.setConfig(line.c_str());
+    LOG_D(TAG, "Processing a=%s",line.c_str());
   }
   sonde.checkConfig(); // eliminate invalid entries
 }
