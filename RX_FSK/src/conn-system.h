@@ -34,6 +34,10 @@ public:
 
         String getName();
 
+        String getStatusAsJson();
+
+        String escapeJsonString(const String &input);
+
 private:
 
 };

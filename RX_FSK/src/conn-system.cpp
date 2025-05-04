@@ -47,6 +47,35 @@ static void appendBatt(char *buf, int maxlen) {
     snprintf(buf+p, maxlen-p, ", Batt: %.2fV", batt);
 }
 
+float batteryVoltage() {
+    if (!pmu && sonde.config.batt_adc < 0) {
+        return 0.0;
+    }
+    if (pmu) {
+        return pmu->getBattVoltage() * 0.001f; 
+    }
+    int raw = analogRead(sonde.config.batt_adc);
+    float voltage = (float)raw / 4095.0f * 2.0f * 3.3f * 1.1f;
+    return voltage;
+}
+
+
+String formatUptime(uint32_t seconds) {
+  int days = seconds / 86400;
+  int hours = (seconds % 86400) / 3600;
+  int minutes = (seconds % 3600) / 60;
+  int secs = seconds % 60;
+
+  char buf[64];
+  if (days > 0) {
+    snprintf(buf, sizeof(buf), "%dd %dh %dm %ds", days, hours, minutes, secs);
+  } else {
+    snprintf(buf, sizeof(buf), "%dh %dm %ds", hours, minutes, secs);
+  }
+
+  return String(buf);
+}
+
 String ConnSystem::getStatus() {
   /* Special connector for obtaining system status.... */
   // uptime
@@ -112,5 +141,85 @@ String ConnSystem::getStatus() {
   return String(buf);
 }
 
+String ConnSystem::getStatusAsJson() {
+  uint32_t uptime = esp_timer_get_time() / 1000000;
+
+#if FEATURE_RS92
+  const char *rs92 = ephtxt[ephstate];
+#else
+  const char *rs92 = "not supported in this version";
+#endif
+
+  const char *fpstr;
+  int i = 0;
+  while (fingerprintValue[i] != sonde.fingerprint && fingerprintValue[i] != -1) i++;
+  fpstr = (fingerprintValue[i] == -1) ? "Unknown board" : fingerprintText[i];
+
+  time_t now;
+  struct tm timeinfo;
+  time(&now);
+  gmtime_r(&now, &timeinfo);
+  char nowstr[30];
+  strftime(nowstr, sizeof(nowstr), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
+
+  // Get fallback DNS
+  esp_netif_dns_info_t d;
+  esp_netif_get_dns_info(WiFi.STA.netif(), ESP_NETIF_DNS_FALLBACK, &d);
+  IPAddress fallbackDNS(d.ip.u_addr.ip4.addr);
+
+  // Assemble clean JSON
+  String json = "{";
+
+  json += "\"uptime\":\"" + formatUptime(uptime) + "\",";
+  json += "\"wifi_uptime\":\"" + formatUptime(uptime - netup_time) + "\",";
+  json += "\"timestamp\":\"" + String(nowstr) + "\",";
+  json += "\"fingerprint\":{\"id\":" + String(sonde.fingerprint) + ",\"text\":\"" + escapeJsonString(fpstr) + "\"},";
+  json += "\"battery\":{\"voltage\":" + String(batteryVoltage(), 2) + "},";
+  json += "\"rdzwxGO_connected\":" + String(rdzclient.connected() ? "true" : "false");
+
+#if FEATURE_RS92
+  json += ",\"rs92\":{\"eph_state\":\"" + String(rs92) + "\"";
+  if (ephstate == EPH_GOOD) {
+    json += ",\"eph_nowstr\":\"" + String(eph_nowstr) + "\"";
+  }
+  json += "}";
+#endif
+
+  json += ",\"dns\":[";
+  json += "\"" + WiFi.dnsIP(0).toString() + "\",";
+  json += "\"" + WiFi.dnsIP(1).toString() + "\",";
+  json += "\"" + fallbackDNS.toString() + "\"";
+  json += "]";
+
+  json += "}";
+
+  return json;
+}
+
+String ConnSystem::escapeJsonString(const String& input) {
+  String escaped = "";
+  for (unsigned int i = 0; i < input.length(); i++) {
+    char c = input.charAt(i);
+    switch (c) {
+      case '\"': escaped += "\\\""; break;
+      case '\\': escaped += "\\\\"; break;
+      case '\b': escaped += "\\b";  break;
+      case '\f': escaped += "\\f";  break;
+      case '\n': escaped += "\\n";  break;
+      case '\r': escaped += "\\r";  break;
+      case '\t': escaped += "\\t";  break;
+      default:
+        if (c >= 0 && c <= 0x1F) {
+          escaped += "\\u";
+          char buf[5];
+          snprintf(buf, sizeof(buf), "%04x", c);
+          escaped += String(buf);
+        } else {
+          escaped += c;
+        }
+    }
+  }
+  return escaped;
+}
 
 ConnSystem connSystem;

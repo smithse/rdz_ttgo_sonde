@@ -1552,6 +1552,14 @@ void SetupAsyncServer() {
      request->send(response);
   });
 
+  server.on("/system.json", HTTP_GET,  [](AsyncWebServerRequest * request) {
+    request->send(200, "text/json", connSystem.getStatusAsJson());
+  });
+
+  server.on("/live.json", HTTP_GET,  [](AsyncWebServerRequest * request) {
+    request->send(200, "text/json", createLiveJson());
+  });
+
   server.onNotFound([](AsyncWebServerRequest * request) {
     if (request->method() == HTTP_OPTIONS) {
       request->send(200);
